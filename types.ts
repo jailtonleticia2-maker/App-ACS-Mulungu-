@@ -73,3 +73,9 @@ export interface AuthState {
     role: UserRole;
   } | null;
 }
+export const PSF_LIST: string[] = [
+  'PSF Centro',
+  'PSF Zona Norte',
+  'PSF Zona Sul',
+  'PSF Rural'
+];

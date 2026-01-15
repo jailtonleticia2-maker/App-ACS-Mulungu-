@@ -9,14 +9,14 @@ import IndicatorsSection from './components/IndicatorsSection';
 import TreasurySection from './components/TreasurySection';
 import Logo from './components/Logo';
 import { databaseService } from './services/databaseService';
-import { Member, UserRole, AuthState, APSIndicator, DentalIndicator } from './types';
+import { Member, UserRole, AuthState, APSIndicator, DentalIndicator, PSF_LIST } from './types';
 
 const DEFAULT_APS: APSIndicator[] = [
   { code: 'C1', title: 'C1 - MAIS ACESSO À ATENÇÃO PRIMÁRIA À SAÚDE (APS)', description: 'Garantia de acolhimento e acesso universal.', cityValue: '95%', percentage: 95, status: 'Ótimo' },
   { code: 'C2', title: 'C2 - CUIDADO NO DESENVOLVIMENTO INFANTIL', description: 'Acompanhamento do crescimento e vancinação.', cityValue: '75%', percentage: 75, status: 'Suficiente' },
   { code: 'C3', title: 'C3 - CUIDADO DA GESTANTE E PUÉRPERA', description: 'Assistência integral no pré-natal e pós-parto.', cityValue: '88%', percentage: 88, status: 'Bom' },
   { code: 'C4', title: 'C4 - CUIDADO DA PESSOA COM DIABETES', description: 'Controle de glicemia e acompanhamento médico.', cityValue: '82%', percentage: 82, status: 'Bom' },
-  { code: 'C5', title: 'C5 - CUIDADO DA PESSOA COM HIPERTENSÃO', description: 'Monitoramento da pressão arterial e riscos.', cityValue: '85%', percentage: 85, status: 'Bom' },
+  { code: 'C5', title: 'C5 - CUIDADO DA PESSOA COM HIPERTENSÃO', description: 'Monitoramento da pressão arterial e risks.', cityValue: '85%', percentage: 85, status: 'Bom' },
   { code: 'C6', title: 'C6 - CUIDADO DA PESSOA IDOSA', description: 'Atenção multidimensional à saúde do idoso.', cityValue: '80%', percentage: 80, status: 'Bom' },
   { code: 'C7', title: 'C7 - CUIDADO DA MULHER NA PREVENÇÃO DO CÂNCER', description: 'Rastreamento de câncer de colo e mama.', cityValue: '60%', percentage: 60, status: 'Suficiente' }
 ];
@@ -50,6 +50,7 @@ const App: React.FC = () => {
   const [loginForm, setLoginForm] = useState({ cpf: '', password: '' });
   const [registrationPhoto, setRegistrationPhoto] = useState<string>('');
   const [regArea, setRegArea] = useState<'Rural' | 'Urbana'>('Urbana');
+  const [regPsf, setRegPsf] = useState<string>(PSF_LIST[0]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -114,7 +115,6 @@ const App: React.FC = () => {
 
   const handleAdminVerify = (e: React.FormEvent) => {
     e.preventDefault();
-    // Senha mestre atualizada para jailton30
     if (adminPassword === 'jailton30') {
       setAuthState({ user: { id: 'admin-01', name: 'Administrador', role: UserRole.ADMIN } });
       setShowAdminLogin(false);
@@ -123,6 +123,31 @@ const App: React.FC = () => {
     } else {
       alert('Senha mestra incorreta.');
     }
+  };
+
+  const handleRegistration = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    const newMember: Member = {
+      id: `acs-${Date.now()}`,
+      fullName: (formData.get('fullName') as string || '').toUpperCase(),
+      birthDate: formData.get('birthDate') as string || '',
+      cpf: (formData.get('cpf') as string || '').replace(/\D/g, ''),
+      areaType: regArea,
+      workplace: regPsf, 
+      team: (formData.get('team') as string || '').toUpperCase(),
+      microArea: (formData.get('microArea') as string || ''),
+      profileImage: registrationPhoto,
+      cns: '', 
+      password: '1234', 
+      status: 'Pendente',
+      registrationDate: new Date().toISOString(),
+      role: UserRole.ACS,
+    };
+    
+    await databaseService.saveMember(newMember);
+    setRegistrationState('success');
   };
 
   if (loading) {
@@ -165,7 +190,7 @@ const App: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <button onClick={() => setActiveTab('indicators')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all">📊</div>
                 <h3 className="text-xl font-bold text-slate-800">Indicadores</h3>
@@ -175,11 +200,6 @@ const App: React.FC = () => {
                 <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-amber-600 group-hover:text-white transition-all">⚖️</div>
                 <h3 className="text-xl font-bold text-slate-800">Tesouraria</h3>
                 <p className="text-slate-500 text-sm mt-2">Transparência.</p>
-              </button>
-              <button onClick={() => setActiveTab('news')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
-                <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all">📰</div>
-                <h3 className="text-xl font-bold text-slate-800">Notícias MS</h3>
-                <p className="text-slate-500 text-sm mt-2">Informativos oficiais.</p>
               </button>
               <button onClick={() => setActiveTab('profile')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all">🪪</div>
@@ -257,26 +277,7 @@ const App: React.FC = () => {
                 <h3 className="text-2xl font-black text-emerald-900 uppercase tracking-tighter">Ficha de Inscrição</h3>
                 <button onClick={() => setRegistrationState('closed')} className="text-slate-300 hover:text-rose-600 text-2xl">✕</button>
              </div>
-             <form onSubmit={async (e) => {
-               e.preventDefault();
-               const target = e.target as any;
-               const newMember: Member = {
-                 id: `acs-${Date.now()}`,
-                 fullName: target[0].value.toUpperCase(),
-                 birthDate: target[1].value,
-                 cpf: target[2].value.replace(/\D/g, ''),
-                 areaType: regArea,
-                 workplace: target[3].value.toUpperCase(),
-                 team: target[4].value.toUpperCase(),
-                 microArea: target[5].value,
-                 profileImage: registrationPhoto,
-                 cns: '', password: '1234', status: 'Pendente',
-                 registrationDate: new Date().toISOString(),
-                 role: UserRole.ACS,
-               };
-               await databaseService.saveMember(newMember);
-               setRegistrationState('success');
-             }} className="space-y-4">
+             <form onSubmit={handleRegistration} className="space-y-4">
                 <div className="flex flex-col items-center mb-6" onClick={() => fileInputRef.current?.click()}>
                    <div className="w-24 h-24 bg-slate-100 rounded-3xl border-2 border-emerald-100 flex items-center justify-center overflow-hidden mb-2 shadow-inner">
                       {registrationPhoto ? <img src={registrationPhoto} className="w-full h-full object-cover" /> : <span className="text-3xl">📷</span>}
@@ -291,16 +292,35 @@ const App: React.FC = () => {
                    }} className="hidden" />
                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Toque para Foto</p>
                 </div>
-                <input placeholder="NOME COMPLETO" className="w-full p-4 bg-slate-50 border rounded-xl font-bold uppercase" required />
+                
+                <input name="fullName" placeholder="NOME COMPLETO" className="w-full p-4 bg-slate-50 border rounded-xl font-bold uppercase" required />
+                
                 <div className="grid grid-cols-2 gap-4">
-                   <input type="date" className="w-full p-4 bg-slate-50 border rounded-xl font-bold uppercase text-[10px]" required />
-                   <input placeholder="CPF" className="w-full p-4 bg-slate-50 border rounded-xl font-bold" required />
+                   <input name="birthDate" type="date" className="w-full p-4 bg-slate-50 border rounded-xl font-bold uppercase text-[10px]" required />
+                   <input name="cpf" placeholder="CPF" className="w-full p-4 bg-slate-50 border rounded-xl font-bold" required />
                 </div>
+                
                 <div className="flex gap-2">
                    <button type="button" onClick={() => setRegArea('Urbana')} className={`flex-1 py-4 rounded-xl font-black uppercase text-[10px] border-2 ${regArea === 'Urbana' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>Urbana</button>
                    <button type="button" onClick={() => setRegArea('Rural')} className={`flex-1 py-4 rounded-xl font-black uppercase text-[10px] border-2 ${regArea === 'Rural' ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>Rural</button>
                 </div>
-                <input placeholder="UNIDADE DE SAÚDE" className="w-full p-4 bg-slate-50 border rounded-xl font-bold uppercase" required />
+                
+                <div>
+                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Unidade de Saúde (PSF)</label>
+                   <select 
+                     value={regPsf} 
+                     onChange={e => setRegPsf(e.target.value)}
+                     className="w-full p-4 bg-slate-50 border rounded-xl font-bold uppercase text-xs"
+                   >
+                     {PSF_LIST.map(psf => <option key={psf} value={psf}>{psf}</option>)}
+                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <input name="team" placeholder="EQUIPE" className="w-full p-4 bg-slate-50 border rounded-xl font-bold uppercase" required />
+                   <input name="microArea" placeholder="MICROÁREA" className="w-full p-4 bg-slate-50 border rounded-xl font-bold uppercase" required />
+                </div>
+                
                 <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black shadow-lg uppercase tracking-widest text-xs mt-4">ENVIAR INSCRIÇÃO</button>
              </form>
            </div>

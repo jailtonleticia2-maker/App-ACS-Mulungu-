@@ -21,6 +21,9 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
   const [view, setView] = useState<'summary' | 'history'>('summary');
   
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showFeeModal, setShowFeeModal] = useState(false);
+  const [newFee, setNewFee] = useState<number>(0);
+  
   const [editForm, setEditForm] = useState<Partial<MonthlyBalance>>({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
@@ -32,6 +35,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
   useEffect(() => {
     const unsubSummary = databaseService.subscribeTreasury((data) => {
       setSummary(data);
+      setNewFee(data.monthlyFee);
     });
 
     const unsubHistory = databaseService.subscribeMonthlyHistory(selectedYear, (data) => {
@@ -76,13 +80,20 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
     };
 
     await databaseService.saveMonthlyBalance(fullBalance);
-    
-    // Opcional: Atualizar a taxa de mensalidade se o admin mudou no resumo
-    if (summary && summary.monthlyFee !== summary.monthlyFee) {
-       await databaseService.updateTreasury({ ...summary, updatedBy: userName });
-    }
-
     setShowEditModal(false);
+  };
+
+  const handleSaveFee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (summary) {
+      await databaseService.updateTreasury({ 
+        ...summary, 
+        monthlyFee: newFee,
+        updatedBy: userName 
+      });
+      setShowFeeModal(false);
+      alert("Valor da mensalidade atualizado!");
+    }
   };
 
   const deleteHistoryItem = async (id: string) => {
@@ -185,15 +196,28 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
             </div>
           </div>
 
-          {/* INFORMAÇÕES EXTRAS */}
+          {/* INFORMAÇÕES EXTRAS COM EDIÇÃO DE MENSALIDADE */}
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-10">
             <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-3xl shadow-inner">💰</div>
             <div className="flex-1 text-center md:text-left">
               <h4 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Mensalidade Sócio</h4>
               <p className="text-slate-500 font-medium text-sm mt-1">Valor fixado em assembleia para todos os agentes associados.</p>
             </div>
-            <div className="text-3xl font-black text-emerald-600 bg-emerald-50 px-8 py-4 rounded-2xl border border-emerald-100">
-              {formatCurrency(summary.monthlyFee)}
+            <div className="flex flex-col items-center gap-2">
+              <div className="text-3xl font-black text-emerald-600 bg-emerald-50 px-8 py-4 rounded-2xl border border-emerald-100">
+                {formatCurrency(summary.monthlyFee)}
+              </div>
+              {isAdmin && (
+                <button 
+                  onClick={() => {
+                    setNewFee(summary.monthlyFee);
+                    setShowFeeModal(true);
+                  }}
+                  className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline"
+                >
+                  [ Editar Valor ]
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -233,6 +257,33 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* MODAL DE EDIÇÃO DA MENSALIDADE GLOBAL */}
+      {showFeeModal && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[250] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm shadow-2xl animate-in zoom-in duration-300">
+            <h3 className="text-2xl font-black text-emerald-900 mb-6 uppercase tracking-tight text-center">Mensalidade Sócio</h3>
+            <form onSubmit={handleSaveFee} className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center block mb-2">Novo Valor da Taxa (R$)</label>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  required 
+                  autoFocus
+                  value={newFee} 
+                  onChange={e => setNewFee(parseFloat(e.target.value))} 
+                  className="w-full p-5 bg-slate-50 border-2 rounded-2xl font-black text-emerald-700 text-3xl text-center" 
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                <button type="submit" className="w-full bg-emerald-900 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-black transition-all">Confirmar Novo Valor</button>
+                <button type="button" onClick={() => setShowFeeModal(false)} className="w-full text-slate-400 font-bold uppercase text-[9px] tracking-widest py-2">Cancelar</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
