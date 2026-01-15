@@ -4,6 +4,14 @@ export enum UserRole {
   ACS = 'ACS'
 }
 
+export const PSF_LIST = [
+  "PSF CANUDOS",
+  "PSF CAROLINA",
+  "PSF ALAGADIÇO",
+  "PSF VARZEA",
+  "PSF ARNOLD"
+];
+
 export interface Member {
   id: string;
   fullName: string;
@@ -22,14 +30,6 @@ export interface Member {
   role: UserRole;
 }
 
-export interface NewsItem {
-  title: string;
-  summary: string;
-  content: string;
-  date: string;
-  url: string;
-}
-
 export interface APSIndicator {
   code: string;
   title: string;
@@ -37,6 +37,13 @@ export interface APSIndicator {
   cityValue: string;
   percentage?: number;
   status: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+}
+
+export interface PSFRankingData {
+  psfName: string;
+  indicators: APSIndicator[];
+  totalScore: number;
+  lastUpdate: string;
 }
 
 export interface DentalIndicator {
@@ -57,13 +64,22 @@ export interface TreasuryData {
 }
 
 export interface MonthlyBalance {
-  id: string; // Formato YYYY-MM
+  id: string;
   year: number;
   month: number;
   income: number;
   expense: number;
   description?: string;
   updatedAt: string;
+}
+
+// Added NewsItem interface to fix module export errors
+export interface NewsItem {
+  title: string;
+  summary: string;
+  content: string;
+  date: string;
+  url: string;
 }
 
 export interface AuthState {
@@ -73,10 +89,3 @@ export interface AuthState {
     role: UserRole;
   } | null;
 }
-export const PSF_LIST: string[] = [
-  'PSF CAROLINA',
-  'PSF ARNOLD',
-  'PSF CANUDOS',
-  'PSF ALAGADICO',
-  'PSF VARZEA'
-];

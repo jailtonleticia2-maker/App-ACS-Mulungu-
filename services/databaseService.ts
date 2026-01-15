@@ -13,7 +13,7 @@ import {
   writeBatch,
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance } from "../types";
+import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance, PSFRankingData, PSF_LIST } from "../types";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDIS91OFlTIzbq44YCAAn95BAzGW5A-KBw",
@@ -27,7 +27,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Função auxiliar para remover campos undefined que o Firestore não aceita
 const cleanData = (obj: any) => {
   const clean: any = {};
   Object.keys(obj).forEach(key => {
@@ -61,19 +60,15 @@ export const databaseService = {
 
   saveMember: async (member: Member) => {
     if (!member.id) throw new Error("ID do membro é obrigatório para salvar.");
-    console.log("DatabaseService: Salvando membro", member.id);
     const memberRef = doc(db, "members", member.id);
     const dataToSave = cleanData(member);
     await setDoc(memberRef, dataToSave, { merge: true });
-    console.log("DatabaseService: Membro salvo com sucesso");
   },
 
   deleteMember: async (id: string) => {
     if (!id) throw new Error("ID é obrigatório para exclusão.");
-    console.log("DatabaseService: Solicitando exclusão de", id);
     const memberRef = doc(db, "members", id);
     await deleteDoc(memberRef);
-    console.log("DatabaseService: Documento removido do Firestore");
   },
 
   // --- INDICADORES ---
@@ -87,6 +82,25 @@ export const databaseService = {
 
   updateAPS: async (indicator: APSIndicator) => {
     await setDoc(doc(db, "aps_indicators", indicator.code), indicator);
+  },
+
+  // --- RANKING PSF ---
+  subscribePSFRankings: (callback: (rankings: PSFRankingData[]) => void) => {
+    return onSnapshot(collection(db, "psf_rankings"), (snapshot) => {
+      callback(snapshot.docs.map(doc => doc.data() as PSFRankingData));
+    });
+  },
+
+  updatePSFRanking: async (psfName: string, indicators: APSIndicator[]) => {
+    const scoreMap: Record<string, number> = { 'Ótimo': 4, 'Bom': 3, 'Suficiente': 2, 'Regular': 1 };
+    const totalScore = indicators.reduce((acc, curr) => acc + (scoreMap[curr.status] || 0), 0);
+    
+    await setDoc(doc(db, "psf_rankings", psfName.replace(/\s+/g, '_')), {
+      psfName,
+      indicators,
+      totalScore,
+      lastUpdate: new Date().toISOString()
+    });
   },
 
   subscribeDental: (callback: (indicators: DentalIndicator[]) => void, onError: (err: any) => void) => {
@@ -155,6 +169,17 @@ export const databaseService = {
     const batch = writeBatch(db);
     aps.forEach(item => batch.set(doc(db, "aps_indicators", item.code), item));
     dental.forEach(item => batch.set(doc(db, "dental_indicators", item.code), item));
+    
+    // Seed inicial para o ranking de cada PSF
+    PSF_LIST.forEach(psf => {
+      batch.set(doc(db, "psf_rankings", psf.replace(/\s+/g, '_')), {
+        psfName: psf,
+        indicators: aps.map(a => ({ ...a, status: 'Suficiente', cityValue: '0%' })),
+        totalScore: aps.length * 2,
+        lastUpdate: new Date().toISOString()
+      });
+    });
+
     await batch.commit();
   },
 
