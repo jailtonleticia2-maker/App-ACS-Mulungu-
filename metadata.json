@@ -1,0 +1,7 @@
+{
+  "name": "Associação dos ACS de Mulungu do Morro",
+  "description": "Plataforma integrada para a Associação de Agentes Comunitários de Saúde de Mulungu do Morro, incluindo gestão de membros, emissão de carteirinhas, notícias do Ministério da Saúde e acesso a contracheque.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

@@ -1,0 +1,10 @@
+
+{
+  "appId": "com.acsmulungu.app",
+  "appName": "ACS Mulungu",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}
