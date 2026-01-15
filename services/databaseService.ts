@@ -27,25 +27,56 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Função auxiliar para remover campos undefined que o Firestore não aceita
+const cleanData = (obj: any) => {
+  const clean: any = {};
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined) {
+      clean[key] = obj[key];
+    }
+  });
+  return clean;
+};
+
 export const databaseService = {
   // --- MEMBROS ---
   subscribeMembers: (callback: (members: Member[]) => void, onError: (err: any) => void) => {
-    const q = query(collection(db, "members"), orderBy("registrationDate", "desc"));
-    return onSnapshot(q, 
-      (snapshot) => callback(snapshot.docs.map(doc => doc.data() as Member)),
-      (error) => onError(error)
-    );
+    try {
+      const q = query(collection(db, "members"), orderBy("registrationDate", "desc"));
+      return onSnapshot(q, 
+        (snapshot) => {
+          const members = snapshot.docs.map(doc => ({ ...doc.data() as Member, id: doc.id }));
+          callback(members);
+        },
+        (error) => {
+          console.error("Erro no Snapshot de Membros:", error);
+          onError(error);
+        }
+      );
+    } catch (err) {
+      console.error("Erro ao assinar membros:", err);
+      return () => {};
+    }
   },
 
   saveMember: async (member: Member) => {
-    await setDoc(doc(db, "members", member.id), member);
+    if (!member.id) throw new Error("ID do membro é obrigatório para salvar.");
+    console.log("DatabaseService: Salvando membro", member.id);
+    const memberRef = doc(db, "members", member.id);
+    const dataToSave = cleanData(member);
+    await setDoc(memberRef, dataToSave, { merge: true });
+    console.log("DatabaseService: Membro salvo com sucesso");
   },
 
   deleteMember: async (id: string) => {
-    await deleteDoc(doc(db, "members", id));
+    if (!id) throw new Error("ID é obrigatório para exclusão.");
+    console.log("DatabaseService: Solicitando exclusão de", id);
+    const memberRef = doc(db, "members", id);
+    await deleteDoc(memberRef);
+    console.log("DatabaseService: Documento removido do Firestore");
   },
 
-  // --- INDICADORES APS ---
+  // --- INDICADORES ---
   subscribeAPS: (callback: (indicators: APSIndicator[]) => void, onError: (err: any) => void) => {
     const q = query(collection(db, "aps_indicators"), orderBy("code", "asc"));
     return onSnapshot(q, 
@@ -58,7 +89,6 @@ export const databaseService = {
     await setDoc(doc(db, "aps_indicators", indicator.code), indicator);
   },
 
-  // --- INDICADORES BUCAIS ---
   subscribeDental: (callback: (indicators: DentalIndicator[]) => void, onError: (err: any) => void) => {
     const q = query(collection(db, "dental_indicators"), orderBy("code", "asc"));
     return onSnapshot(q, 
@@ -71,7 +101,7 @@ export const databaseService = {
     await setDoc(doc(db, "dental_indicators", indicator.code), indicator);
   },
 
-  // --- TESOURARIA RESUMO ---
+  // --- TESOURARIA ---
   subscribeTreasury: (callback: (data: TreasuryData) => void) => {
     return onSnapshot(doc(db, "treasury", "summary"), (snapshot) => {
       if (snapshot.exists()) {
@@ -98,7 +128,6 @@ export const databaseService = {
     });
   },
 
-  // --- TESOURARIA HISTÓRICO MENSAL ---
   subscribeMonthlyHistory: (year: number, callback: (balances: MonthlyBalance[]) => void) => {
     const q = query(
       collection(db, "treasury_history"), 
@@ -129,35 +158,23 @@ export const databaseService = {
     await batch.commit();
   },
 
-  // --- LIMPEZA TOTAL ---
   clearDatabase: async (keepUserId: string) => {
     const batch = writeBatch(db);
-    
-    // Deletar Membros (exceto o admin atual)
     const membersSnap = await getDocs(collection(db, "members"));
     membersSnap.forEach((doc) => {
       if (doc.id !== keepUserId) {
         batch.delete(doc.ref);
       }
     });
-
-    // Deletar Histórico Financeiro
     const historySnap = await getDocs(collection(db, "treasury_history"));
     historySnap.forEach((doc) => {
       batch.delete(doc.ref);
     });
-
-    // Resetar Resumo Tesouraria
     const treasuryRef = doc(db, "treasury", "summary");
     batch.set(treasuryRef, {
-      id: 'summary',
-      totalIn: 0,
-      totalOut: 0,
-      monthlyFee: 20,
-      lastUpdate: new Date().toISOString(),
-      updatedBy: 'Sistema (Reset)'
+      id: 'summary', totalIn: 0, totalOut: 0, monthlyFee: 20,
+      lastUpdate: new Date().toISOString(), updatedBy: 'Sistema (Reset)'
     });
-
     await batch.commit();
   }
 };

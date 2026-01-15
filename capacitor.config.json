@@ -1,9 +1,8 @@
-
 {
   "appId": "com.acsmulungu.app",
   "appName": "ACS Mulungu",
-  "webDir": "dist",
   "server": {
+    "url": "https://acsmulungu.vercel.app",
     "androidScheme": "https",
     "cleartext": true
   }
