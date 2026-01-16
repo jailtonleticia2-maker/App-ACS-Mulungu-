@@ -69,6 +69,8 @@ export interface MonthlyBalance {
   month: number;
   income: number;
   expense: number;
+  bankFee?: number;
+  tax?: number;
   description?: string;
   updatedAt: string;
 }
