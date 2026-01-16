@@ -12,6 +12,16 @@ interface ProfileSectionProps {
 const ProfileSection: React.FC<ProfileSectionProps> = ({ member, isGuest, onOpenLogin }) => {
   const [showPrintModal, setShowPrintModal] = useState(false);
 
+  // Função auxiliar para formatar data sem erro de fuso horário
+  const formatBirthDate = (dateStr: string) => {
+    if (!dateStr) return '---';
+    if (dateStr.includes('-')) {
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    return dateStr;
+  };
+
   if (isGuest) {
     return (
       <div className="bg-white rounded-[3rem] p-16 text-center shadow-sm border border-slate-100 animate-in zoom-in duration-500">
@@ -50,7 +60,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({ member, isGuest, onOpen
               </div>
               <div>
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nascimento</label>
-                <p className="font-bold text-slate-800">{member.birthDate ? new Date(member.birthDate).toLocaleDateString('pt-BR') : '---'}</p>
+                <p className="font-bold text-slate-800">{formatBirthDate(member.birthDate)}</p>
               </div>
             </div>
 

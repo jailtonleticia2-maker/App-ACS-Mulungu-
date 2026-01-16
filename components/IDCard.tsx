@@ -11,6 +11,17 @@ interface IDCardProps {
 const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
   const [isPreparing, setIsPreparing] = useState(false);
 
+  // Função auxiliar para formatar data sem erro de fuso horário
+  const formatBirthDate = (dateStr: string) => {
+    if (!dateStr) return '--/--/----';
+    // Se a data vier no formato YYYY-MM-DD
+    if (dateStr.includes('-')) {
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    return dateStr;
+  };
+
   const handlePrint = () => {
     setIsPreparing(true);
     
@@ -23,7 +34,6 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
       return;
     }
 
-    // Criamos o HTML que será enviado para a nova janela
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -83,7 +93,6 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
           <div class="card-print">${frontEl.innerHTML}</div>
           <div class="card-print">${backEl.innerHTML}</div>
           <script>
-            // Tenta acionar a impressão automaticamente após o carregamento dos estilos
             window.onload = () => {
               setTimeout(() => {
                 window.print();
@@ -94,20 +103,17 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
       </html>
     `;
 
-    // Abrimos uma nova janela vazia
     const printWin = window.open('', '_blank');
     
     if (printWin) {
       printWin.document.write(htmlContent);
       printWin.document.close();
       
-      // No Android, o window.print() disparado pelo script interno costuma funcionar melhor.
-      // Resetamos o estado local
       setTimeout(() => {
         setIsPreparing(false);
       }, 1000);
     } else {
-      alert("O bloqueador de pop-ups impediu a abertura da carteirinha. Por favor, permita pop-ups para este site.");
+      alert("O bloqueador de pop-ups impediu a abertura da carteirinha.");
       setIsPreparing(false);
     }
   };
@@ -139,7 +145,7 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
             </div>
             <div>
               <label className="text-[4px] text-slate-400 font-black uppercase tracking-widest block">Nascimento</label>
-              <p className="text-[7px] font-bold text-slate-700">{member.birthDate ? new Date(member.birthDate).toLocaleDateString('pt-BR') : '--/--/----'}</p>
+              <p className="text-[7px] font-bold text-slate-700">{formatBirthDate(member.birthDate)}</p>
             </div>
           </div>
           <div className="pt-1 border-t border-slate-100 mt-1">
