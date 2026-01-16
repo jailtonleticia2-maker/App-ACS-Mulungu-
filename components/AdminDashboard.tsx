@@ -294,10 +294,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                   </div>
                   <input type="file" ref={fileInputRef} onChange={(e) => { const file = e.target.files?.[0]; if(file){ const reader = new FileReader(); reader.onloadend = () => setFormData({...formData, profileImage: reader.result as string}); reader.readAsDataURL(file); } }} className="hidden" />
                </div>
-               <div className="md:col-span-2">
+               
+               <div className="md:col-span-1">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Nome Completo</label>
                   <input required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black uppercase text-sm" />
                </div>
+
+               <div className="md:col-span-1">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Data de Nascimento</label>
+                  <input required type="date" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-sm" />
+               </div>
+
                <div className="md:col-span-2 grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Equipe</label>
@@ -308,6 +315,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                     <input required value={formData.microArea} onChange={e => setFormData({...formData, microArea: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black uppercase text-sm" />
                   </div>
                </div>
+               
                <div className="md:col-span-2 grid grid-cols-2 gap-4 pt-4">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="w-full font-black text-slate-400 uppercase text-[10px] tracking-widest py-4">Cancelar</button>
                   <button disabled={isProcessing} type="submit" className="w-full bg-emerald-900 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl">
@@ -322,7 +330,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
       {/* MODAL SENHA */}
       {isPasswordModalOpen && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[250] flex items-center justify-center p-4">
-           <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm shadow-2xl text-center">
+           <div className="bg-white rounded-[3rem] p-10 w-full max-sm shadow-2xl text-center">
               <h3 className="text-2xl font-black text-slate-800 uppercase mb-8">Nova Senha</h3>
               <form onSubmit={handlePasswordUpdate} className="space-y-6">
                  <input required autoFocus type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full p-6 bg-slate-50 border-4 rounded-[2.5rem] font-black text-center text-3xl tracking-[0.4em]" />
