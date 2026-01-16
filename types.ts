@@ -61,6 +61,11 @@ export interface TreasuryData {
   monthlyFee: number;
   lastUpdate: string;
   updatedBy: string;
+  consolidatedPeriod?: string;
+  consolidatedWithdrawal?: number;
+  consolidatedSpent?: number;
+  consolidatedInHand?: number;
+  consolidatedBankBalance?: number;
 }
 
 export interface MonthlyBalance {
