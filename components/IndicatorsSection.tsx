@@ -48,14 +48,14 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
       bar: 'bg-blue-500',
       points: 3
     },
-    'Suficiente': { 
+    'Regular': { 
       bg: 'bg-amber-50', 
       text: 'text-amber-700', 
       border: 'border-amber-100',
       bar: 'bg-amber-500',
       points: 2
     },
-    'Regular': { 
+    'Suficiente': { 
       bg: 'bg-rose-50', 
       text: 'text-rose-700', 
       border: 'border-rose-100',
@@ -115,7 +115,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
       {activeSubTab === 'aps' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {apsIndicators.map(indicator => {
-            const config = statusConfig[indicator.status] || statusConfig['Regular'];
+            const config = statusConfig[indicator.status] || statusConfig['Suficiente'];
             const percentage = indicator.percentage || 0;
             return (
               <div key={indicator.code} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 relative group overflow-hidden">
@@ -127,7 +127,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                 <h3 className="font-black text-slate-800 text-base mb-6 leading-tight min-h-[3rem] uppercase">{indicator.title}</h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Atingimento</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alcance</span>
                     <span className={`text-3xl font-black tracking-tighter ${config.text}`}>{indicator.cityValue}</span>
                   </div>
                   <div className="h-3 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
@@ -143,7 +143,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
       {activeSubTab === 'dental' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dentalIndicators.map(indicator => {
-            const config = statusConfig[indicator.status] || statusConfig['Regular'];
+            const config = statusConfig[indicator.status] || statusConfig['Suficiente'];
             const percentage = indicator.percentage || 0;
             return (
               <div key={indicator.code} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 relative group overflow-hidden">
@@ -155,7 +155,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                 <h3 className="font-black text-slate-800 text-base mb-6 leading-tight min-h-[3rem] uppercase">{indicator.title}</h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Atingimento</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alcance</span>
                     <span className={`text-3xl font-black tracking-tighter ${config.text}`}>{indicator.cityValue || '0%'}</span>
                   </div>
                   <div className="h-3 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
@@ -173,8 +173,8 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
           {isAdmin && (
             <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
                <div>
-                  <h4 className="text-sm font-black text-emerald-900 uppercase">Gerenciar Rankings Individuais</h4>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">Selecione uma unidade para atualizar os indicadores</p>
+                  <h4 className="text-sm font-black text-emerald-900 uppercase">Gerenciar Unidades</h4>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Selecione uma unidade para atualizar</p>
                </div>
                <select 
                  className="p-3 bg-slate-50 border-2 rounded-xl font-black text-xs uppercase outline-none focus:border-emerald-500"
@@ -185,7 +185,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                      setSelectedPSFForEdit(val);
                      setEditingPSFData(existing || {
                         psfName: val,
-                        indicators: apsIndicators.map(a => ({...a, status: 'Suficiente', cityValue: '0%'})),
+                        indicators: apsIndicators.map(a => ({...a, status: 'Regular', cityValue: '0%'})),
                         totalScore: 0,
                         lastUpdate: ''
                      });
@@ -206,7 +206,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                 <div className="text-center py-10 text-slate-300 font-black uppercase text-xs italic">Aguardando dados de ranking...</div>
               ) : (
                 sortedRankings.map((psf, index) => {
-                  const maxPossible = 7 * 4; // 7 indicadores * status 'Ótimo'(4)
+                  const maxPossible = 28; // 7 indicadores * 4 pontos
                   const scorePerc = (psf.totalScore / maxPossible) * 100;
                   const isTop = index < 3;
                   
@@ -214,35 +214,27 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                     <div key={psf.psfName} className="relative">
                       <div className="flex justify-between items-end mb-2">
                         <div className="flex items-center gap-3">
-                          <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${isTop ? 'bg-amber-100 text-amber-700 border-2 border-amber-200' : 'bg-slate-100 text-slate-400'}`}>
+                          <span className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm ${isTop ? 'bg-amber-100 text-amber-700 border-2 border-amber-200 shadow-sm' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
                             {index + 1}º
                           </span>
-                          <h4 className="font-black text-slate-700 uppercase text-sm tracking-tight">{psf.psfName}</h4>
+                          <div>
+                            <h4 className="font-black text-slate-700 uppercase text-sm tracking-tight">{psf.psfName}</h4>
+                          </div>
                         </div>
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{psf.totalScore} pts</span>
                       </div>
                       <div className="h-6 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-1">
                         <div 
-                          className={`h-full rounded-full transition-all duration-1000 ease-out flex items-center justify-end px-3 ${index === 0 ? 'bg-emerald-600' : index === 1 ? 'bg-blue-600' : 'bg-slate-400'}`}
+                          className={`h-full rounded-full transition-all duration-1000 ease-out flex items-center justify-end px-3 ${index === 0 ? 'bg-emerald-600' : index === 1 ? 'bg-blue-600' : index === 2 ? 'bg-amber-500' : 'bg-slate-400'}`}
                           style={{ width: `${Math.max(scorePerc, 5)}%` }}
                         >
-                          <span className="text-[8px] font-black text-white">{Math.round(scorePerc)}%</span>
+                          {scorePerc > 10 && <span className="text-[8px] font-black text-white">{Math.round(scorePerc)}%</span>}
                         </div>
                       </div>
                     </div>
                   );
                 })
               )}
-            </div>
-
-            <div className="mt-12 p-6 bg-amber-50 rounded-[2rem] border border-amber-100 text-center">
-               <p className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em] mb-2">Legenda de Pontuação</p>
-               <div className="flex flex-wrap justify-center gap-4">
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">Ótimo: 4 pts</span>
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">Bom: 3 pts</span>
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">Suficiente: 2 pts</span>
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">Regular: 1 pt</span>
-               </div>
             </div>
           </div>
         </div>
@@ -255,7 +247,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
             <header className="flex justify-between items-center mb-8 sticky top-0 bg-white py-2 z-10 border-b border-slate-50">
                <div>
                   <h3 className="text-2xl font-black text-emerald-900 uppercase tracking-tighter">{selectedPSFForEdit}</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">Atualizar Indicadores Individuais</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Atualizar Classificação</p>
                </div>
                <button onClick={() => setSelectedPSFForEdit(null)} className="text-slate-300 text-2xl">✕</button>
             </header>
@@ -267,21 +259,39 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                     <span className="text-[10px] font-black text-emerald-600 bg-white px-3 py-1 rounded-lg border border-emerald-100">{ind.code}</span>
                     <h5 className="font-black text-slate-700 uppercase text-[11px] leading-tight flex-1 ml-3">{ind.title}</h5>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {['Ótimo', 'Bom', 'Suficiente', 'Regular'].map(st => (
-                      <button 
-                        key={st}
-                        type="button"
-                        onClick={() => {
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nota Lida (Ex: 88%)</label>
+                      <input 
+                        required
+                        placeholder="0%"
+                        value={ind.cityValue}
+                        onChange={e => {
                           const newInds = [...editingPSFData.indicators];
-                          newInds[idx].status = st as any;
+                          newInds[idx].cityValue = e.target.value;
                           setEditingPSFData({...editingPSFData, indicators: newInds});
                         }}
-                        className={`py-2 rounded-xl text-[8px] font-black uppercase transition-all border-2 ${ind.status === st ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-400 border-slate-100'}`}
-                      >
-                        {st}
-                      </button>
-                    ))}
+                        className="w-full p-4 bg-white border-2 rounded-xl font-black text-emerald-700 outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-4 gap-2">
+                      {['Ótimo', 'Bom', 'Regular', 'Suficiente'].map(st => (
+                        <button 
+                          key={st}
+                          type="button"
+                          onClick={() => {
+                            const newInds = [...editingPSFData.indicators];
+                            newInds[idx].status = st as any;
+                            setEditingPSFData({...editingPSFData, indicators: newInds});
+                          }}
+                          className={`py-2 rounded-xl text-[8px] font-black uppercase transition-all border-2 ${ind.status === st ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-400 border-slate-100'}`}
+                        >
+                          {st}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -299,7 +309,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
       {editingItem && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-[3rem] p-10 w-full max-w-lg shadow-2xl animate-in zoom-in duration-300">
-            <h3 className="text-2xl font-black text-emerald-900 mb-6 uppercase tracking-tight">Atualizar Indicador {editingItem.data.code}</h3>
+            <h3 className="text-2xl font-black text-emerald-900 mb-6 uppercase tracking-tight">Atualizar {editingItem.data.code}</h3>
             <form onSubmit={handleUpdate} className="space-y-6 text-left">
               <div className="space-y-4">
                 <div>
@@ -327,9 +337,9 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
               </div>
               
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-3 block">Classificação de Desempenho</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-3 block">Status</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {['Ótimo', 'Bom', 'Suficiente', 'Regular'].map(status => (
+                  {['Ótimo', 'Bom', 'Regular', 'Suficiente'].map(status => (
                     <button 
                       key={status} 
                       type="button" 
@@ -344,7 +354,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
 
               <div className="flex gap-4 pt-6">
                 <button type="button" onClick={() => setEditingItem(null)} className="flex-1 font-black text-slate-400 uppercase text-[10px] tracking-widest">Cancelar</button>
-                <button type="submit" className="flex-1 bg-emerald-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl">Salvar Mudanças</button>
+                <button type="submit" className="flex-1 bg-emerald-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl">Salvar</button>
               </div>
             </form>
           </div>
