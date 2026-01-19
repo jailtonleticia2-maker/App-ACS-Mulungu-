@@ -9,6 +9,7 @@ const NewsSection: React.FC = () => {
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
 
   const INVESTSUS_URL = "https://investsuspaineis.saude.gov.br/extensions/CGIN_InvestsusPaineis/CGIN_InvestsusPaineis.html";
+  const REPASSE_ACS_URL = "https://relatorioaps.saude.gov.br/gerenciaaps/pagamento/acs";
 
   const loadNews = async () => {
     try {
@@ -54,31 +55,57 @@ const NewsSection: React.FC = () => {
         </button>
       </header>
 
-      {/* DESTAQUE: PAINEL INVESTSUS */}
-      <section className="bg-blue-900 rounded-[3rem] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 text-white/5 text-9xl font-black select-none pointer-events-none">📊</div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-           <div className="w-20 h-20 bg-white/10 rounded-[2rem] flex items-center justify-center text-4xl shadow-inner backdrop-blur-md">
-             🏛️
-           </div>
-           <div className="flex-1 text-center md:text-left">
-             <h3 className="text-2xl font-black uppercase tracking-tighter mb-2">Painéis InvestSUS</h3>
-             <p className="text-blue-100 text-sm font-medium leading-relaxed opacity-80 mb-6">
-               Acompanhe os repasses financeiros, investimentos e indicadores federais diretamente pelo portal oficial do Ministério da Saúde.
-             </p>
-             <a 
-               href={INVESTSUS_URL} 
-               target="_blank" 
-               rel="noopener noreferrer"
-               className="inline-block bg-white text-blue-900 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-blue-50 transition-all active:scale-95"
-             >
-               Abrir Painel Federal ↗
-             </a>
-           </div>
-        </div>
-      </section>
+      <div className="grid grid-cols-1 gap-6">
+        {/* DESTAQUE 1: PAINEL INVESTSUS */}
+        <section className="bg-blue-900 rounded-[3rem] p-8 md:p-10 text-white shadow-xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 text-white/5 text-8xl font-black select-none pointer-events-none">📊</div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-3xl shadow-inner backdrop-blur-md shrink-0">
+              🏛️
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-xl font-black uppercase tracking-tighter mb-1">Painéis InvestSUS</h3>
+              <p className="text-blue-100 text-xs font-medium opacity-80 mb-4">
+                Acompanhe os repasses financeiros e investimentos federais diretamente pelo portal oficial do MS.
+              </p>
+              <a 
+                href={INVESTSUS_URL} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-block bg-white text-blue-900 px-6 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg hover:bg-blue-50 transition-all active:scale-95"
+              >
+                Abrir Painel Federal ↗
+              </a>
+            </div>
+          </div>
+        </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* DESTAQUE 2: CONSULTE REPASSE ACS */}
+        <section className="bg-emerald-800 rounded-[3rem] p-8 md:p-10 text-white shadow-xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 text-white/5 text-8xl font-black select-none pointer-events-none">💰</div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-3xl shadow-inner backdrop-blur-md shrink-0">
+              🏦
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-xl font-black uppercase tracking-tighter mb-1">Consulte Repasse ACS</h3>
+              <p className="text-emerald-100 text-xs font-medium opacity-80 mb-4">
+                Gerencie e visualize os pagamentos e incentivos financeiros federais destinados aos ACS da região.
+              </p>
+              <a 
+                href={REPASSE_ACS_URL} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-block bg-white text-emerald-800 px-6 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg hover:bg-emerald-50 transition-all active:scale-95"
+              >
+                Consultar Pagamentos ↗
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
         {news.map((item, idx) => (
           <article 
             key={idx} 
