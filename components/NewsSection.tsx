@@ -6,62 +6,77 @@ import { NewsItem } from '../types';
 const NewsSection: React.FC = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
 
+  const INVESTSUS_URL = "https://investsuspaineis.saude.gov.br/extensions/CGIN_InvestsusPaineis/CGIN_InvestsusPaineis.html";
+
+  const loadNews = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchHealthNews();
+      setNews(data || []);
+    } catch (err) {
+      console.error("Falha ao carregar notícias:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadNews = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchHealthNews();
-        if (data && data.length > 0) {
-          setNews(data);
-        } else {
-          setError(true);
-        }
-      } catch (err) {
-        console.error("Falha no componente de notícias:", err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadNews();
   }, []);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-6">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center text-xl">🌐</div>
-        </div>
-        <div className="text-center">
-          <p className="text-emerald-900 font-black uppercase tracking-tighter text-lg">Atualizando Notícias</p>
-          <p className="text-slate-400 text-sm font-medium">Conectando ao Radar de Informações...</p>
-        </div>
+        <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+        <p className="text-emerald-900 font-black uppercase tracking-tighter text-lg">Buscando Notícias...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-12">
+    <div className="space-y-8 animate-in fade-in duration-700 pb-12 text-left">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
-            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Sincronizado via Google Search</span>
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Informação em Tempo Real</span>
           </div>
-          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Informativo ACS</h2>
-          <p className="text-slate-500 font-medium">As notícias que impactam sua rotina profissional</p>
+          <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Notícias MS</h2>
+          <p className="text-slate-500 font-medium">As últimas do Ministério da Saúde e SUS</p>
         </div>
+        <button 
+          onClick={loadNews}
+          className="bg-emerald-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg"
+        >
+          Atualizar 🔄
+        </button>
       </header>
 
-      {error && !news.length && (
-        <div className="bg-amber-50 p-8 rounded-[2rem] border border-amber-100 text-center">
-           <p className="text-amber-800 font-bold italic">Não foi possível carregar notícias em tempo real. Tente novamente em instantes.</p>
+      {/* DESTAQUE: PAINEL INVESTSUS */}
+      <section className="bg-blue-900 rounded-[3rem] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-8 text-white/5 text-9xl font-black select-none pointer-events-none">📊</div>
+        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+           <div className="w-20 h-20 bg-white/10 rounded-[2rem] flex items-center justify-center text-4xl shadow-inner backdrop-blur-md">
+             🏛️
+           </div>
+           <div className="flex-1 text-center md:text-left">
+             <h3 className="text-2xl font-black uppercase tracking-tighter mb-2">Painéis InvestSUS</h3>
+             <p className="text-blue-100 text-sm font-medium leading-relaxed opacity-80 mb-6">
+               Acompanhe os repasses financeiros, investimentos e indicadores federais diretamente pelo portal oficial do Ministério da Saúde.
+             </p>
+             <a 
+               href={INVESTSUS_URL} 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="inline-block bg-white text-blue-900 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-blue-50 transition-all active:scale-95"
+             >
+               Abrir Painel Federal ↗
+             </a>
+           </div>
         </div>
-      )}
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {news.map((item, idx) => (
@@ -72,34 +87,22 @@ const NewsSection: React.FC = () => {
           >
             <div>
               <div className="flex items-center justify-between mb-6">
-                <span className="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase rounded-xl border border-emerald-100">SAÚDE PÚBLICA</span>
+                <span className="px-4 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-black uppercase rounded-xl border border-slate-100">SAÚDE</span>
                 <span className="text-[11px] text-slate-400 font-black uppercase tracking-widest">{item.date}</span>
               </div>
-              <h3 className="text-2xl font-black text-slate-800 group-hover:text-emerald-700 transition-colors mb-4 leading-tight">
+              <h3 className="text-xl font-black text-slate-800 group-hover:text-emerald-700 transition-colors mb-4 leading-tight">
                 {item.title}
               </h3>
-              <p className="text-slate-500 text-base leading-relaxed line-clamp-3 mb-8 font-medium italic">
-                "{item.summary}"
+              <p className="text-slate-500 text-sm leading-relaxed line-clamp-3 mb-8 font-medium">
+                {item.summary}
               </p>
             </div>
             <div className="flex items-center justify-between pt-6 border-t border-slate-50">
-              <span className="text-emerald-600 font-black text-[10px] uppercase tracking-widest">Ler Notícia Completa</span>
+              <span className="text-emerald-600 font-black text-[10px] uppercase tracking-widest">Ler Completa</span>
               <span className="text-slate-300 group-hover:text-emerald-500 transition-colors text-xl">→</span>
             </div>
           </article>
         ))}
-      </div>
-
-      <div className="bg-emerald-900 p-12 rounded-[4rem] text-white flex flex-col md:flex-row items-center justify-between gap-10 shadow-2xl relative overflow-hidden">
-        <div className="relative z-10 text-center md:text-left">
-          <h4 className="text-3xl font-black mb-4 leading-none">Canal de Notificações</h4>
-          <p className="text-emerald-100/80 text-lg font-medium max-w-md">
-            Receba as portarias do Ministério da Saúde direto no seu celular.
-          </p>
-        </div>
-        <button className="bg-white text-emerald-900 px-10 py-5 rounded-2xl font-black uppercase text-xs shadow-xl relative z-10 w-full md:w-auto">
-          Ativar Alertas
-        </button>
       </div>
 
       {selectedNews && (
@@ -109,21 +112,12 @@ const NewsSection: React.FC = () => {
             onClick={e => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-white/90 backdrop-blur-md p-8 border-b border-slate-100 flex justify-between items-center z-10">
-               <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Leitura Oficial</span>
+               <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Leitura da Notícia</span>
                <button onClick={() => setSelectedNews(null)} className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all text-xl">✕</button>
             </div>
             
             <div className="p-8 md:p-12">
-               <div className="flex items-center gap-4 mb-8">
-                 <div className="w-14 h-14 bg-emerald-900 text-white rounded-2xl flex items-center justify-center text-2xl">📰</div>
-                 <div>
-                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Fonte: {new URL(selectedNews.url).hostname}</p>
-                   <p className="text-sm font-bold text-slate-500">{selectedNews.date}</p>
-                 </div>
-               </div>
-               
                <h3 className="text-3xl font-black text-slate-900 mb-8 leading-tight">{selectedNews.title}</h3>
-               
                <div className="space-y-6">
                   {selectedNews.content.split('\n\n').map((paragraph, i) => (
                     <p key={i} className="text-slate-600 text-lg leading-relaxed font-medium">
@@ -131,16 +125,14 @@ const NewsSection: React.FC = () => {
                     </p>
                   ))}
                </div>
-
-               <div className="mt-12 p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
-                  <p className="text-xs font-bold text-slate-400 uppercase">Conteúdo verificado em tempo real</p>
+               <div className="mt-12 flex justify-end">
                   <a 
                     href={selectedNews.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg text-center w-full md:w-auto"
+                    className="bg-emerald-600 text-white px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg"
                   >
-                    Ver Fonte Completa ↗
+                    Ver na Fonte Original ↗
                   </a>
                </div>
             </div>
