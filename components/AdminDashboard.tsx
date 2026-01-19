@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Member, UserRole, PSF_LIST } from '../types';
 import { databaseService } from '../services/databaseService';
 
@@ -21,12 +21,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [accessStats, setAccessStats] = useState({ accessCount: 0 });
   
-  // Novo estado para confirmações seguras
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (adminView === 'settings') {
+      const unsub = databaseService.subscribeSystemStats((stats) => {
+        setAccessStats(stats);
+      });
+      return () => unsub();
+    }
+  }, [adminView]);
 
   const pendingMembers = members.filter(m => m.status === 'Pendente');
   const activeMembers = members.filter(m => m.status !== 'Pendente');
@@ -41,7 +50,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
   const [formData, setFormData] = useState<Member>(initialForm);
   const [newPassword, setNewPassword] = useState('');
 
-  // FUNÇÕES DE AÇÃO PROCESSADAS VIA MODAL DE CONFIRMAÇÃO
   const executeConfirmAction = async () => {
     if (!confirmAction) return;
     setIsProcessing(true);
@@ -117,7 +125,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
 
       {adminView === 'members' ? (
         <div className="space-y-10">
-          {/* SEÇÃO PENDENTES - COM BOTOES QUE ABREM MODAL DE CONFIRMAÇÃO */}
           {pendingMembers.length > 0 && (
             <section className="bg-amber-50 border-2 border-amber-200 rounded-[3rem] p-8 md:p-10 shadow-lg animate-in zoom-in duration-300">
                <div className="flex items-center gap-3 mb-8">
@@ -159,7 +166,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
             </section>
           )}
 
-          {/* LISTA GERAL */}
           <div className="space-y-4">
             <div className="flex justify-between items-end px-4">
                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Agentes Associados</h3>
@@ -199,14 +205,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                            <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">EQ: {m.team} / MA: {m.microArea}</p>
                         </td>
                         <td className="px-6 py-5 text-center">
-                           <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase ${m.status === 'Ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{m.status}</span>
+                           <span className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase bg-emerald-50 text-emerald-700">{m.status}</span>
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex justify-center items-center gap-2">
                             <button type="button" onClick={() => setConfirmAction({ type: 'admin', member: m })} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${m.role === UserRole.ADMIN ? 'bg-amber-400 text-white' : 'bg-slate-100 text-slate-300'}`} title="Cargo">⭐</button>
-                            <button type="button" onClick={() => { setEditingMember(m); setNewPassword(''); setIsPasswordModalOpen(true); }} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm">🔑</button>
-                            <button type="button" onClick={() => { setEditingMember(m); setFormData({...m}); setIsModalOpen(true); }} className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center shadow-sm">✏️</button>
-                            <button type="button" onClick={() => setConfirmAction({ type: 'delete', member: m })} className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm">🗑️</button>
+                            <button type="button" onClick={() => { setEditingMember(m); setNewPassword(''); setIsPasswordModalOpen(true); }} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm" title="Mudar Senha">🔑</button>
+                            <button type="button" onClick={() => { setEditingMember(m); setFormData({...m}); setIsModalOpen(true); }} className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center shadow-sm" title="Editar Dados">✏️</button>
+                            <button type="button" onClick={() => setConfirmAction({ type: 'delete', member: m })} className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Excluir">🗑️</button>
                           </div>
                         </td>
                       </tr>
@@ -218,25 +224,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
           </div>
         </div>
       ) : (
-        <div className="max-w-2xl mx-auto bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100">
-           <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-8">Painel de Sistema</h3>
-           <div className="space-y-4">
-              <button onClick={onResetIndicators} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-[10px] shadow-lg">Sincronizar Indicadores 360</button>
-              <button 
-                onClick={() => { 
-                   if(window.prompt('Para resetar tudo, digite RESET:') === 'RESET') {
-                      databaseService.clearDatabase(currentUserId).then(() => alert('Tudo limpo!'));
-                   }
-                }} 
-                className="w-full bg-rose-50 text-rose-600 py-5 rounded-2xl font-black uppercase text-[10px] border-2 border-rose-100"
-              >
-                Zerar Banco de Dados
-              </button>
+        <div className="max-w-2xl mx-auto space-y-6">
+           {/* Card de Acessos */}
+           <div className="bg-emerald-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden group">
+              <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="text-center md:text-left">
+                  <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span>
+                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Tráfego Real</span>
+                  </div>
+                  <h3 className="text-2xl font-black uppercase tracking-tighter">Alcance do Portal</h3>
+                  <p className="text-emerald-100 text-[10px] font-bold uppercase opacity-70 mt-1">Total acumulado de acessos ao site e app</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md px-10 py-6 rounded-[2.5rem] border border-white/20 shadow-inner">
+                   <p className="text-[9px] font-black uppercase text-emerald-300 text-center mb-1">Acessos Totais</p>
+                   <p className="text-5xl font-black text-white tracking-tighter text-center">{accessStats.accessCount.toLocaleString('pt-BR')}</p>
+                </div>
+              </div>
+           </div>
+
+           <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100">
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-8">Painel de Sistema</h3>
+              <div className="space-y-4">
+                  <button onClick={onResetIndicators} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-[10px] shadow-lg">Sincronizar Indicadores 360</button>
+                  <button 
+                    onClick={() => { 
+                      if(window.prompt('Para resetar tudo, digite RESET:') === 'RESET') {
+                          databaseService.clearDatabase(currentUserId).then(() => alert('Tudo limpo!'));
+                      }
+                    }} 
+                    className="w-full bg-rose-50 text-rose-600 py-5 rounded-2xl font-black uppercase text-[10px] border-2 border-rose-100"
+                  >
+                    Zerar Banco de Dados
+                  </button>
+              </div>
            </div>
         </div>
       )}
 
-      {/* NOVO MODAL DE CONFIRMAÇÃO SEGURO */}
+      {/* MODAL DE CONFIRMAÇÃO SEGURO */}
       {confirmAction && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[500] flex items-center justify-center p-4">
           <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm shadow-2xl animate-in zoom-in duration-300 text-center">
@@ -244,7 +271,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
               confirmAction.type === 'delete' ? 'bg-rose-50 text-rose-500' : 
               confirmAction.type === 'approve' ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'
             }`}>
-              {confirmAction.type === 'delete' ? '⚠️' : confirmAction.type === 'approve' ? '✅' : '⭐'}
+              {confirmAction.type === 'delete' ? '⚠️' : 
+               confirmAction.type === 'approve' ? '✅' : '⭐'}
             </div>
             <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter mb-4">
               {confirmAction.type === 'delete' ? 'Confirmar Exclusão' : 
@@ -327,7 +355,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
         </div>
       )}
 
-      {/* MODAL SENHA */}
       {isPasswordModalOpen && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[250] flex items-center justify-center p-4">
            <div className="bg-white rounded-[3rem] p-10 w-full max-sm shadow-2xl text-center">

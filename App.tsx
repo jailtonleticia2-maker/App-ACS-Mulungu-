@@ -53,7 +53,6 @@ const App: React.FC = () => {
   const [regArea, setRegArea] = useState<'Rural' | 'Urbana'>('Urbana');
   const [regPsf, setRegPsf] = useState<string>(PSF_LIST[0]);
   
-  // Parâmetro de Verificação
   const [verifyId, setVerifyId] = useState<string | null>(() => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('verify');
@@ -62,6 +61,9 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Incrementa contador de acessos global ao iniciar o app
+    databaseService.incrementAccessCount();
+
     const handleErr = (err: any) => {
       console.error("Erro Crítico Firebase:", err);
       setLoading(false);
@@ -167,7 +169,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Se estiver em modo de verificação de QR Code
   if (verifyId) {
     const memberToVerify = members.find(m => m.id === verifyId);
     if (memberToVerify) {
