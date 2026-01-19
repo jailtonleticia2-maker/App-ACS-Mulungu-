@@ -7,6 +7,7 @@ import NewsSection from './components/NewsSection';
 import PayslipSection from './components/PayslipSection';
 import IndicatorsSection from './components/IndicatorsSection';
 import TreasurySection from './components/TreasurySection';
+import VerificationSection from './components/VerificationSection';
 import Logo from './components/Logo';
 import { databaseService } from './services/databaseService';
 import { Member, UserRole, AuthState, APSIndicator, DentalIndicator, PSF_LIST } from './types';
@@ -52,6 +53,12 @@ const App: React.FC = () => {
   const [regArea, setRegArea] = useState<'Rural' | 'Urbana'>('Urbana');
   const [regPsf, setRegPsf] = useState<string>(PSF_LIST[0]);
   
+  // Parâmetro de Verificação
+  const [verifyId, setVerifyId] = useState<string | null>(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('verify');
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -101,12 +108,12 @@ const App: React.FC = () => {
     );
 
     if (user) {
-      if (user.status === 'Ativo') {
+      if (user.status === 'Pendente') {
+        alert('Seu cadastro está pendente de aprovação pela diretoria.');
+      } else {
         setAuthState({ user: { id: user.id, name: user.fullName, role: user.role || UserRole.ACS } });
         setShowUserLogin(false);
         setLoginForm({ cpf: '', password: '' });
-      } else {
-        alert('Seu cadastro está pendente de aprovação pela diretoria.');
       }
     } else {
       alert('Dados incorretos ou CPF não cadastrado.');
@@ -160,6 +167,22 @@ const App: React.FC = () => {
     );
   }
 
+  // Se estiver em modo de verificação de QR Code
+  if (verifyId) {
+    const memberToVerify = members.find(m => m.id === verifyId);
+    if (memberToVerify) {
+      return (
+        <VerificationSection 
+          member={memberToVerify} 
+          onClose={() => {
+            setVerifyId(null);
+            window.history.replaceState({}, '', window.location.pathname);
+          }} 
+        />
+      );
+    }
+  }
+
   return (
     <Layout 
       activeTab={activeTab} 
@@ -178,7 +201,7 @@ const App: React.FC = () => {
         <div className="space-y-8 animate-in fade-in duration-500">
            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left">
-                <h2 className="text-4xl font-black text-emerald-900 tracking-tight uppercase leading-none">Portal ACS Mulungu</h2>
+                <h2 className="text-4xl font-black text-emerald-900 tracking-tight uppercase leading-none">Portal ACS Mulungu do Morro</h2>
                 <p className="text-slate-500 font-medium italic mt-2">
                   {authState.user?.id === 'guest' ? 'Bem-vindo(a) ao portal da associação' : `Olá, ${authState.user?.name}`}
                 </p>
@@ -260,7 +283,15 @@ const App: React.FC = () => {
           <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl max-sm w-full">
             <h3 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-tighter">🔒 Área Restrita</h3>
             <form onSubmit={handleAdminVerify} className="space-y-4">
-              <input type="password" placeholder="SENHA MESTRA" className="w-full p-5 bg-slate-50 border rounded-2xl text-center text-2xl font-black tracking-widest outline-none focus:ring-2 focus:ring-emerald-500" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} autoFocus required />
+              <input 
+                type="password" 
+                placeholder="SENHA MESTRA" 
+                className="w-full p-5 bg-slate-50 border rounded-2xl text-center text-2xl font-black tracking-widest outline-none focus:ring-2 focus:ring-emerald-500" 
+                value={adminPassword} 
+                onChange={(e) => setAdminPassword(e.target.value)} 
+                autoFocus 
+                required 
+              />
               <div className="flex gap-2">
                 <button type="button" onClick={() => setShowAdminLogin(false)} className="flex-1 py-4 text-slate-400 font-bold uppercase text-[10px] tracking-widest">Voltar</button>
                 <button type="submit" className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg">Entrar</button>
