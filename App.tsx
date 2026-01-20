@@ -8,6 +8,7 @@ import PayslipSection from './components/PayslipSection';
 import IndicatorsSection from './components/IndicatorsSection';
 import TreasurySection from './components/TreasurySection';
 import VerificationSection from './components/VerificationSection';
+import BestPracticesSection from './components/BestPracticesSection';
 import Logo from './components/Logo';
 import { databaseService } from './services/databaseService';
 import { Member, UserRole, AuthState, APSIndicator, DentalIndicator, PSF_LIST } from './types';
@@ -61,7 +62,6 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Incrementa contador de acessos global ao iniciar o app
     databaseService.incrementAccessCount();
 
     const handleErr = (err: any) => {
@@ -202,7 +202,7 @@ const App: React.FC = () => {
         <div className="space-y-8 animate-in fade-in duration-500">
            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left">
-                <h2 className="text-4xl font-black text-emerald-900 tracking-tight uppercase leading-none">Portal ACS Mulungu do Morro</h2>
+                <h2 className="text-4xl font-black text-emerald-900 tracking-tight uppercase leading-none">Portal ACS Mulungu</h2>
                 <p className="text-slate-500 font-medium italic mt-2">
                   {authState.user?.id === 'guest' ? 'Bem-vindo(a) ao portal da associação' : `Olá, ${authState.user?.name}`}
                 </p>
@@ -214,21 +214,26 @@ const App: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
+              <button onClick={() => setActiveTab('best-practices')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
+                <div className="w-14 h-14 bg-yellow-50 text-yellow-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-yellow-400 group-hover:text-blue-900 transition-all">✅</div>
+                <h3 className="text-xl font-bold text-slate-800">Boas Práticas</h3>
+                <p className="text-slate-500 text-sm mt-2 tracking-tight">Metas de Visita.</p>
+              </button>
               <button onClick={() => setActiveTab('indicators')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all">📊</div>
                 <h3 className="text-xl font-bold text-slate-800">Indicadores</h3>
-                <p className="text-slate-500 text-sm mt-2">Saúde Brasil 360.</p>
+                <p className="text-slate-500 text-sm mt-2 tracking-tight">Previne Brasil e Rankings.</p>
               </button>
               <button onClick={() => setActiveTab('treasury')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-amber-600 group-hover:text-white transition-all">⚖️</div>
                 <h3 className="text-xl font-bold text-slate-800">Tesouraria</h3>
-                <p className="text-slate-500 text-sm mt-2">Transparência.</p>
+                <p className="text-slate-500 text-sm mt-2 tracking-tight">Transparência Financeira.</p>
               </button>
               <button onClick={() => setActiveTab('profile')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all">🪪</div>
                 <h3 className="text-xl font-bold text-slate-800">Carteirinha</h3>
-                <p className="text-slate-500 text-sm mt-2">Profissional.</p>
+                <p className="text-slate-500 text-sm mt-2 tracking-tight">Dados e Identificação.</p>
               </button>
             </div>
             
@@ -256,6 +261,7 @@ const App: React.FC = () => {
           }} 
         />
       )}
+      {activeTab === 'best-practices' && <BestPracticesSection />}
       {activeTab === 'indicators' && <IndicatorsSection apsIndicators={apsIndicators} setApsIndicators={setApsIndicators} dentalIndicators={dentalIndicators} setDentalIndicators={setDentalIndicators} isAdmin={authState.user?.role === UserRole.ADMIN} />}
       {activeTab === 'treasury' && <TreasurySection isAdmin={authState.user?.role === UserRole.ADMIN} userName={authState.user?.name || ''} />}
       {activeTab === 'profile' && <ProfileSection member={members.find(m => m.id === authState.user?.id)} isGuest={authState.user?.id === 'guest'} onOpenLogin={() => setShowUserLogin(true)} />}

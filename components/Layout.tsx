@@ -17,11 +17,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
   
   const menuItems = [
     { id: 'dashboard', label: 'Início', icon: '🏠' },
+    { id: 'best-practices', label: 'Boas Práticas', icon: '✅' },
     { id: 'indicators', label: 'Indicadores', icon: '📊' },
     { id: 'treasury', label: 'Tesouraria', icon: '⚖️' },
     { id: 'profile', label: 'Minha Carteirinha', icon: '🪪' },
-    { id: 'news', label: 'Notícias MS', icon: '📰' },
-    { id: 'payslip', label: 'Contracheque', icon: '💰' },
+    { id: 'news', label: 'Notícias MS', icon: '📜' },
     { id: 'members', label: 'Gestão de ACS', icon: '⚙️', restricted: true },
   ];
 
