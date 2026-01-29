@@ -202,7 +202,7 @@ const App: React.FC = () => {
         <div className="space-y-8 animate-in fade-in duration-500">
            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left">
-                <h2 className="text-4xl font-black text-emerald-900 tracking-tight uppercase leading-none">Portal ACS Mulungu</h2>
+                <h2 className="text-4xl font-black text-emerald-900 tracking-tight uppercase leading-none">Portal ACS Mulungu do Morro</h2>
                 <p className="text-slate-500 font-medium italic mt-2">
                   {authState.user?.id === 'guest' ? 'Bem-vindo(a) ao portal da associação' : `Olá, ${authState.user?.name}`}
                 </p>
