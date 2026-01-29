@@ -240,7 +240,7 @@ const App: React.FC = () => {
             <div className="bg-emerald-900 rounded-[3rem] p-10 md:p-20 text-white relative overflow-hidden shadow-2xl">
               <h2 className="text-5xl font-black mb-6 leading-tight max-w-xl text-left">Tecnologia a serviço do Agente.</h2>
               <p className="text-emerald-100 text-xl opacity-80 leading-relaxed max-w-lg mb-10 font-medium text-left">
-                Sincronização em tempo real. Seus indicadores e dados estão protegidos na nuvem.
+                Sincronização em tempo real. Seus dados estão protegidos na nuvem.
               </p>
               <Logo className="absolute -bottom-20 -right-20 w-96 h-96 opacity-10 rotate-12" />
             </div>
