@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Member, UserRole, PSF_LIST } from '../types';
 import { databaseService } from '../services/databaseService';
@@ -41,12 +42,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
 
   const pendingMembers = members.filter(m => m.status === 'Pendente');
   const activeMembers = members.filter(m => m.status !== 'Pendente');
+  const onlineCount = activeMembers.filter(m => m.isOnline).length;
 
   const initialForm: Member = {
     id: '', fullName: '', cpf: '', cns: '', birthDate: '', password: '1234',
     gender: 'Masculino', workplace: PSF_LIST[0], microArea: '', team: '', areaType: 'Urbana',
     status: 'Ativo', registrationDate: new Date().toISOString(),
-    profileImage: '', role: UserRole.ACS, accessCount: 0
+    profileImage: '', role: UserRole.ACS, accessCount: 0, dailyAccessCount: 0, isOnline: false
   };
 
   const [formData, setFormData] = useState<Member>(initialForm);
@@ -127,6 +129,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
 
       {adminView === 'members' ? (
         <div className="space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="bg-emerald-900 text-white p-6 rounded-[2rem] shadow-lg flex items-center justify-between">
+                <div>
+                   <p className="text-[10px] font-black uppercase opacity-60">Sócios Online</p>
+                   <p className="text-3xl font-black">{onlineCount}</p>
+                </div>
+                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-2xl">🟢</div>
+             </div>
+             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                   <p className="text-[10px] font-black uppercase text-slate-400">Total Ativos</p>
+                   <p className="text-3xl font-black text-slate-800">{activeMembers.length}</p>
+                </div>
+                <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-2xl">👥</div>
+             </div>
+             <div className="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex items-center justify-between">
+                <div>
+                   <p className="text-[10px] font-black uppercase text-amber-600">Pendentes</p>
+                   <p className="text-3xl font-black text-amber-700">{pendingMembers.length}</p>
+                </div>
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl">⏳</div>
+             </div>
+          </div>
+
           {pendingMembers.length > 0 && (
             <section className="bg-amber-50 border-2 border-amber-200 rounded-[3rem] p-8 md:p-10 shadow-lg animate-in zoom-in duration-300">
                <div className="flex items-center gap-3 mb-8">
@@ -181,7 +207,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                     <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                       <th className="px-8 py-5">Membro</th>
                       <th className="px-6 py-5 text-center">PSF / Equipe</th>
-                      <th className="px-6 py-5 text-center">Acessos</th>
+                      <th className="px-6 py-5 text-center">Hoje</th>
+                      <th className="px-6 py-5 text-center">Total</th>
                       <th className="px-8 py-5 text-center">Ações</th>
                     </tr>
                   </thead>
@@ -190,13 +217,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                       <tr key={m.id} className="hover:bg-slate-50/50 transition-all">
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-slate-100 overflow-hidden border-2 border-white shadow-md">
-                              {m.profileImage ? <img src={m.profileImage} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center h-full text-[10px] text-slate-300 font-black">ACS</span>}
+                            <div className="relative">
+                              <div className="w-12 h-12 rounded-2xl bg-slate-100 overflow-hidden border-2 border-white shadow-md">
+                                {m.profileImage ? <img src={m.profileImage} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center h-full text-[10px] text-slate-300 font-black">ACS</span>}
+                              </div>
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-black text-slate-800 text-sm uppercase leading-tight">{m.fullName}</p>
-                                {m.role === UserRole.ADMIN && <span className="bg-amber-100 text-amber-700 text-[8px] px-2 py-0.5 rounded-full font-black border border-amber-200">ADM</span>}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className={`font-black text-sm uppercase leading-tight ${m.isOnline ? 'text-emerald-700' : 'text-slate-800'}`}>
+                                  {m.fullName}
+                                </p>
+                                {m.role === UserRole.ADMIN && <span className="bg-amber-100 text-amber-700 text-[8px] px-2 py-0.5 rounded-full font-black border border-amber-200 uppercase tracking-tighter">ADM</span>}
+                                
+                                {/* ETIQUETA ONLINE / OFFLINE AO LADO DO NOME */}
+                                {m.isOnline ? (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[8px] font-black border border-emerald-100 uppercase tracking-tighter animate-pulse shadow-sm">
+                                    <span className="w-1 h-1 bg-emerald-500 rounded-full"></span>
+                                    Online
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-400 px-2 py-0.5 rounded-full text-[8px] font-black border border-slate-200 uppercase tracking-tighter opacity-70">
+                                    Offline
+                                  </span>
+                                )}
                               </div>
                               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">CPF: {m.cpf}</p>
                             </div>
@@ -207,14 +250,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                            <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">EQ: {m.team} / MA: {m.microArea}</p>
                         </td>
                         <td className="px-6 py-5 text-center">
+                           <div className="inline-flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                              <span className="text-[10px]">📱</span>
+                              <span className="text-[11px] font-black text-emerald-700">{m.dailyAccessCount || 0}</span>
+                           </div>
+                        </td>
+                        <td className="px-6 py-5 text-center">
                            <div className="inline-flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 shadow-inner">
-                              <span className="text-[10px]">📲</span>
-                              <span className="text-[11px] font-black text-emerald-700">{m.accessCount || 0}</span>
+                              <span className="text-[11px] font-black text-slate-500">{m.accessCount || 0}</span>
                            </div>
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex justify-center items-center gap-2">
-                            <button type="button" onClick={() => setConfirmAction({ type: 'admin', member: m })} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${m.role === UserRole.ADMIN ? 'bg-amber-400 text-white' : 'bg-slate-100 text-slate-300'}`} title="Cargo">⭐</button>
+                            <button type="button" onClick={() => setConfirmAction({ type: 'admin', member: m })} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${m.role === UserRole.ADMIN ? 'bg-amber-400 text-white shadow-md' : 'bg-slate-100 text-slate-300'}`} title="Cargo">⭐</button>
                             <button type="button" onClick={() => { setEditingMember(m); setNewPassword(''); setIsPasswordModalOpen(true); }} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm" title="Mudar Senha">🔑</button>
                             <button type="button" onClick={() => { setEditingMember(m); setFormData({...m}); setIsModalOpen(true); }} className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center shadow-sm" title="Editar Dados">✏️</button>
                             <button type="button" onClick={() => setConfirmAction({ type: 'delete', member: m })} className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Excluir">🗑️</button>
@@ -230,7 +278,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
         </div>
       ) : (
         <div className="max-w-4xl mx-auto space-y-8">
-           {/* Card de Estatísticas Numéricas (Substitui o Mapa) */}
            <div className="bg-[#0f172a] rounded-[3.5rem] p-12 text-white shadow-2xl relative overflow-hidden group border border-white/5">
               <div className="absolute -right-8 -top-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none"></div>
               
@@ -251,8 +298,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-2xl mt-8">
                    <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[8px] font-black text-slate-500 uppercase">Uptime Sistema</p>
-                      <p className="text-xl font-black">99.9%</p>
+                      <p className="text-[8px] font-black text-slate-500 uppercase">Status Global</p>
+                      <p className="text-xl font-black">{onlineCount} ACS Online</p>
                    </div>
                    <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
                       <p className="text-[8px] font-black text-slate-500 uppercase">Sincronização</p>

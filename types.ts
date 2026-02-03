@@ -28,7 +28,10 @@ export interface Member {
   registrationDate: string;
   status: 'Ativo' | 'Pendente';
   role: UserRole;
-  accessCount?: number; // Contador de acessos individuais
+  accessCount?: number; 
+  isOnline?: boolean; // Indica se está com o app aberto agora
+  dailyAccessCount?: number; // Quantas vezes acessou no dia de hoje
+  lastDailyReset?: string; // Data (YYYY-MM-DD) do último incremento diário
 }
 
 export interface APSIndicator {

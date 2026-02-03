@@ -1,4 +1,5 @@
 
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getFirestore, 
@@ -14,8 +15,7 @@ import {
   getDocs,
   increment,
   updateDoc,
-  addDoc,
-  limit
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance, PSFRankingData, PSF_LIST } from "../types";
 
@@ -49,23 +49,52 @@ const STATUS_POINTS: Record<string, number> = {
 };
 
 export const databaseService = {
-  // --- ESTATÍSTICAS DE SISTEMA ---
+  // --- MONITORAMENTO ONLINE E ACESSOS ---
+  setMemberOnlineStatus: async (memberId: string, status: boolean) => {
+    if (!memberId || memberId === 'guest') return;
+    const memberRef = doc(db, "members", memberId);
+    try {
+      await updateDoc(memberRef, { isOnline: status });
+    } catch (e) {
+      console.error("Erro ao atualizar status online:", e);
+    }
+  },
+
+  incrementDailyAccess: async (memberId: string) => {
+    if (!memberId || memberId === 'guest') return;
+    const today = new Date().toISOString().split('T')[0];
+    const memberRef = doc(db, "members", memberId);
+    
+    try {
+      const snap = await getDoc(memberRef);
+      if (snap.exists()) {
+        const data = snap.data() as Member;
+        if (data.lastDailyReset !== today) {
+          // Novo dia: Reseta o contador diário e incrementa o total
+          await updateDoc(memberRef, { 
+            dailyAccessCount: 1, 
+            lastDailyReset: today,
+            accessCount: increment(1)
+          });
+        } else {
+          // Mesmo dia: Apenas incrementa ambos
+          await updateDoc(memberRef, { 
+            dailyAccessCount: increment(1),
+            accessCount: increment(1)
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao incrementar acesso diário:", e);
+    }
+  },
+
   incrementAccessCount: async () => {
     const statsRef = doc(db, "system", "stats");
     try {
       await updateDoc(statsRef, { accessCount: increment(1) });
     } catch (e) {
       await setDoc(statsRef, { accessCount: 1 }, { merge: true });
-    }
-  },
-
-  incrementMemberAccessCount: async (memberId: string) => {
-    if (!memberId || memberId === 'guest') return;
-    const memberRef = doc(db, "members", memberId);
-    try {
-      await updateDoc(memberRef, { accessCount: increment(1) });
-    } catch (e) {
-      // Se o campo não existir, ele será criado pelo merge no primeiro save
     }
   },
 
@@ -125,7 +154,6 @@ export const databaseService = {
     await setDoc(doc(db, "aps_indicators", indicator.code), indicator);
   },
 
-  // --- RANKING PSF ---
   subscribePSFRankings: (callback: (rankings: PSFRankingData[]) => void) => {
     return onSnapshot(collection(db, "psf_rankings"), (snapshot) => {
       callback(snapshot.docs.map(doc => doc.data() as PSFRankingData));

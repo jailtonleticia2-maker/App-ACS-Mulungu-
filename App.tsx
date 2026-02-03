@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from './components/Layout';
 import AdminDashboard from './components/AdminDashboard';
@@ -61,6 +62,24 @@ const App: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Monitoramento de Status Online
+  useEffect(() => {
+    if (authState.user && authState.user.id !== 'guest') {
+      databaseService.setMemberOnlineStatus(authState.user.id, true);
+
+      // Desativar ao fechar a aba
+      const handleUnload = () => {
+        databaseService.setMemberOnlineStatus(authState.user!.id, false);
+      };
+      
+      window.addEventListener('beforeunload', handleUnload);
+      return () => {
+        window.removeEventListener('beforeunload', handleUnload);
+        databaseService.setMemberOnlineStatus(authState.user!.id, false);
+      };
+    }
+  }, [authState.user]);
+
   useEffect(() => {
     databaseService.incrementAccessCount();
 
@@ -114,8 +133,8 @@ const App: React.FC = () => {
         alert('Seu cadastro está pendente de aprovação pela diretoria.');
       } else {
         setAuthState({ user: { id: user.id, name: user.fullName, role: user.role || UserRole.ACS } });
-        // Incrementar acesso individual
-        databaseService.incrementMemberAccessCount(user.id);
+        // Incrementar acesso total e diário
+        databaseService.incrementDailyAccess(user.id);
         setShowUserLogin(false);
         setLoginForm({ cpf: '', password: '' });
       }
@@ -155,7 +174,9 @@ const App: React.FC = () => {
       status: 'Pendente',
       registrationDate: new Date().toISOString(),
       role: UserRole.ACS,
-      accessCount: 0
+      accessCount: 0,
+      dailyAccessCount: 0,
+      isOnline: false
     };
     
     await databaseService.saveMember(newMember);
@@ -199,7 +220,11 @@ const App: React.FC = () => {
       }} 
       userRole={authState.user?.role || UserRole.ACS} 
       userName={authState.user?.name || 'Visitante'}
-      onLogout={() => { setAuthState({ user: GUEST_USER }); setActiveTab('dashboard'); }}
+      onLogout={() => { 
+        if(authState.user) databaseService.setMemberOnlineStatus(authState.user.id, false);
+        setAuthState({ user: GUEST_USER }); 
+        setActiveTab('dashboard'); 
+      }}
     >
       {activeTab === 'dashboard' && (
         <div className="space-y-8 animate-in fade-in duration-500">
