@@ -1,5 +1,4 @@
 
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getFirestore, 
@@ -15,7 +14,8 @@ import {
   getDocs,
   increment,
   updateDoc,
-  getDoc
+  getDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance, PSFRankingData, PSF_LIST } from "../types";
 
@@ -49,12 +49,28 @@ const STATUS_POINTS: Record<string, number> = {
 };
 
 export const databaseService = {
-  // --- MONITORAMENTO ONLINE E ACESSOS ---
+  // --- MONITORAMENTO REAL-TIME ---
+  updateHeartbeat: async (memberId: string, isOnline: boolean) => {
+    if (!memberId || memberId === 'guest') return;
+    const memberRef = doc(db, "members", memberId);
+    try {
+      await updateDoc(memberRef, { 
+        isOnline: isOnline,
+        lastSeen: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error("Erro ao atualizar heartbeat:", e);
+    }
+  },
+
   setMemberOnlineStatus: async (memberId: string, status: boolean) => {
     if (!memberId || memberId === 'guest') return;
     const memberRef = doc(db, "members", memberId);
     try {
-      await updateDoc(memberRef, { isOnline: status });
+      await updateDoc(memberRef, { 
+        isOnline: status,
+        lastSeen: new Date().toISOString()
+      });
     } catch (e) {
       console.error("Erro ao atualizar status online:", e);
     }
@@ -70,17 +86,17 @@ export const databaseService = {
       if (snap.exists()) {
         const data = snap.data() as Member;
         if (data.lastDailyReset !== today) {
-          // Novo dia: Reseta o contador diário e incrementa o total
           await updateDoc(memberRef, { 
             dailyAccessCount: 1, 
             lastDailyReset: today,
-            accessCount: increment(1)
+            accessCount: increment(1),
+            lastSeen: new Date().toISOString()
           });
         } else {
-          // Mesmo dia: Apenas incrementa ambos
           await updateDoc(memberRef, { 
             dailyAccessCount: increment(1),
-            accessCount: increment(1)
+            accessCount: increment(1),
+            lastSeen: new Date().toISOString()
           });
         }
       }

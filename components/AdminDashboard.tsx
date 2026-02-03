@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Member, UserRole, PSF_LIST } from '../types';
 import { databaseService } from '../services/databaseService';
@@ -23,6 +22,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [accessStats, setAccessStats] = useState({ accessCount: 0 });
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -30,25 +30,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 30000); // Atualiza a cada 30s
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (adminView === 'settings') {
       const unsubStats = databaseService.subscribeSystemStats((stats) => {
         setAccessStats(stats);
       });
-      return () => {
-        unsubStats();
-      };
+      return () => unsubStats();
     }
   }, [adminView]);
 
+  // Função para checar se o membro está REALMENTE online (Heartbeat nos últimos 3 minutos)
+  const isReallyOnline = (member: Member) => {
+    if (!member.isOnline || !member.lastSeen) return false;
+    const lastSeenDate = new Date(member.lastSeen);
+    const diffInMinutes = (currentTime.getTime() - lastSeenDate.getTime()) / 60000;
+    return diffInMinutes < 3; // Menos de 3 minutos é considerado online
+  };
+
   const pendingMembers = members.filter(m => m.status === 'Pendente');
   const activeMembers = members.filter(m => m.status !== 'Pendente');
-  const onlineCount = activeMembers.filter(m => m.isOnline).length;
+  const onlineCount = activeMembers.filter(m => isReallyOnline(m)).length;
 
   const initialForm: Member = {
     id: '', fullName: '', cpf: '', cns: '', birthDate: '', password: '1234',
     gender: 'Masculino', workplace: PSF_LIST[0], microArea: '', team: '', areaType: 'Urbana',
     status: 'Ativo', registrationDate: new Date().toISOString(),
-    profileImage: '', role: UserRole.ACS, accessCount: 0, dailyAccessCount: 0, isOnline: false
+    profileImage: '', role: UserRole.ACS, accessCount: 0, dailyAccessCount: 0, isOnline: false,
+    lastSeen: new Date().toISOString()
   };
 
   const [formData, setFormData] = useState<Member>(initialForm);
@@ -132,7 +144,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
              <div className="bg-emerald-900 text-white p-6 rounded-[2rem] shadow-lg flex items-center justify-between">
                 <div>
-                   <p className="text-[10px] font-black uppercase opacity-60">Sócios Online</p>
+                   <p className="text-[10px] font-black uppercase opacity-60">Sócios Online Real</p>
                    <p className="text-3xl font-black">{onlineCount}</p>
                 </div>
                 <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-2xl">🟢</div>
@@ -153,47 +165,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
              </div>
           </div>
 
-          {pendingMembers.length > 0 && (
-            <section className="bg-amber-50 border-2 border-amber-200 rounded-[3rem] p-8 md:p-10 shadow-lg animate-in zoom-in duration-300">
-               <div className="flex items-center gap-3 mb-8">
-                  <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg">🔔</div>
-                  <h3 className="text-2xl font-black text-amber-900 uppercase tracking-tight">Novos Pedidos ({pendingMembers.length})</h3>
-               </div>
-               
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {pendingMembers.map(m => (
-                    <div key={m.id} className="bg-white p-6 rounded-[2rem] border border-amber-100 flex items-center justify-between shadow-sm">
-                       <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 rounded-2xl bg-slate-50 overflow-hidden border-2 border-amber-100">
-                             {m.profileImage ? <img src={m.profileImage} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center h-full text-xl">👤</span>}
-                          </div>
-                          <div>
-                             <p className="font-black text-slate-800 uppercase text-xs leading-tight">{m.fullName}</p>
-                             <p className="text-[10px] text-slate-400 font-bold uppercase">{m.workplace}</p>
-                          </div>
-                       </div>
-                       <div className="flex flex-col gap-2">
-                          <button 
-                            type="button" 
-                            onClick={() => setConfirmAction({ type: 'approve', member: m })}
-                            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[9px] shadow-md active:scale-95 transition-all"
-                          >
-                            Aceitar
-                          </button>
-                          <button 
-                            type="button" 
-                            onClick={() => setConfirmAction({ type: 'delete', member: m })}
-                            className="bg-rose-50 text-rose-600 px-5 py-2.5 rounded-xl font-black uppercase text-[9px] active:scale-95 transition-all"
-                          >
-                            Recusar
-                          </button>
-                       </div>
-                    </div>
-                  ))}
-               </div>
-            </section>
-          )}
-
           <div className="space-y-4">
             <div className="flex justify-between items-end px-4">
                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Agentes Associados</h3>
@@ -213,7 +184,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {activeMembers.map(m => (
+                    {activeMembers.map(m => {
+                      const online = isReallyOnline(m);
+                      return (
                       <tr key={m.id} className="hover:bg-slate-50/50 transition-all">
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-4">
@@ -224,24 +197,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                             </div>
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className={`font-black text-sm uppercase leading-tight ${m.isOnline ? 'text-emerald-700' : 'text-slate-800'}`}>
+                                <p className={`font-black text-sm uppercase leading-tight ${online ? 'text-emerald-700' : 'text-slate-800'}`}>
                                   {m.fullName}
                                 </p>
                                 {m.role === UserRole.ADMIN && <span className="bg-amber-100 text-amber-700 text-[8px] px-2 py-0.5 rounded-full font-black border border-amber-200 uppercase tracking-tighter">ADM</span>}
                                 
-                                {/* ETIQUETA ONLINE / OFFLINE AO LADO DO NOME */}
-                                {m.isOnline ? (
+                                {online ? (
                                   <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[8px] font-black border border-emerald-100 uppercase tracking-tighter animate-pulse shadow-sm">
-                                    <span className="w-1 h-1 bg-emerald-500 rounded-full"></span>
-                                    Online
+                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                    ATIVO AGORA
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-400 px-2 py-0.5 rounded-full text-[8px] font-black border border-slate-200 uppercase tracking-tighter opacity-70">
-                                    Offline
+                                    OFFLINE
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">CPF: {m.cpf}</p>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">
+                                {m.lastSeen ? `Última Atividade: ${new Date(m.lastSeen).toLocaleTimeString('pt-BR')}` : 'Nunca acessou'}
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -269,7 +243,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

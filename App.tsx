@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from './components/Layout';
 import AdminDashboard from './components/AdminDashboard';
@@ -62,10 +61,16 @@ const App: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Monitoramento de Status Online
+  // Monitoramento de Status Online com HEARTBEAT REAL (1 min)
   useEffect(() => {
     if (authState.user && authState.user.id !== 'guest') {
-      databaseService.setMemberOnlineStatus(authState.user.id, true);
+      // Inicia como Online
+      databaseService.updateHeartbeat(authState.user.id, true);
+
+      // Heartbeat a cada 60 segundos
+      const heartbeatInterval = setInterval(() => {
+        databaseService.updateHeartbeat(authState.user!.id, true);
+      }, 60000);
 
       // Desativar ao fechar a aba
       const handleUnload = () => {
@@ -73,9 +78,11 @@ const App: React.FC = () => {
       };
       
       window.addEventListener('beforeunload', handleUnload);
+      
       return () => {
+        clearInterval(heartbeatInterval);
         window.removeEventListener('beforeunload', handleUnload);
-        databaseService.setMemberOnlineStatus(authState.user!.id, false);
+        if (authState.user) databaseService.setMemberOnlineStatus(authState.user.id, false);
       };
     }
   }, [authState.user]);
@@ -133,7 +140,6 @@ const App: React.FC = () => {
         alert('Seu cadastro está pendente de aprovação pela diretoria.');
       } else {
         setAuthState({ user: { id: user.id, name: user.fullName, role: user.role || UserRole.ACS } });
-        // Incrementar acesso total e diário
         databaseService.incrementDailyAccess(user.id);
         setShowUserLogin(false);
         setLoginForm({ cpf: '', password: '' });
@@ -176,7 +182,8 @@ const App: React.FC = () => {
       role: UserRole.ACS,
       accessCount: 0,
       dailyAccessCount: 0,
-      isOnline: false
+      isOnline: false,
+      lastSeen: new Date().toISOString()
     };
     
     await databaseService.saveMember(newMember);
