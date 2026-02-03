@@ -7,9 +7,9 @@ export enum UserRole {
 export const PSF_LIST = [
   "PSF CANUDOS",
   "PSF CAROLINA",
-  "PSF ALAGADIÇO",
   "PSF VARZEA",
-  "PSF ARNOLD"
+  "PSF ARNOLD",
+  "PSF NOEME TELES"
 ];
 
 export interface Member {
@@ -26,8 +26,9 @@ export interface Member {
   areaType: 'Rural' | 'Urbana';
   profileImage?: string;
   registrationDate: string;
-  status: 'Ativo' | 'Pendente' | 'Inativo';
+  status: 'Ativo' | 'Pendente';
   role: UserRole;
+  accessCount?: number; // Contador de acessos individuais
 }
 
 export interface APSIndicator {
@@ -80,7 +81,6 @@ export interface MonthlyBalance {
   updatedAt: string;
 }
 
-// Added NewsItem interface to fix module export errors
 export interface NewsItem {
   title: string;
   summary: string;

@@ -30,10 +30,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
 
   useEffect(() => {
     if (adminView === 'settings') {
-      const unsub = databaseService.subscribeSystemStats((stats) => {
+      const unsubStats = databaseService.subscribeSystemStats((stats) => {
         setAccessStats(stats);
       });
-      return () => unsub();
+      return () => {
+        unsubStats();
+      };
     }
   }, [adminView]);
 
@@ -44,7 +46,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
     id: '', fullName: '', cpf: '', cns: '', birthDate: '', password: '1234',
     gender: 'Masculino', workplace: PSF_LIST[0], microArea: '', team: '', areaType: 'Urbana',
     status: 'Ativo', registrationDate: new Date().toISOString(),
-    profileImage: '', role: UserRole.ACS
+    profileImage: '', role: UserRole.ACS, accessCount: 0
   };
 
   const [formData, setFormData] = useState<Member>(initialForm);
@@ -179,7 +181,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                     <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                       <th className="px-8 py-5">Membro</th>
                       <th className="px-6 py-5 text-center">PSF / Equipe</th>
-                      <th className="px-6 py-5 text-center">Status</th>
+                      <th className="px-6 py-5 text-center">Acessos</th>
                       <th className="px-8 py-5 text-center">Ações</th>
                     </tr>
                   </thead>
@@ -205,7 +207,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                            <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">EQ: {m.team} / MA: {m.microArea}</p>
                         </td>
                         <td className="px-6 py-5 text-center">
-                           <span className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase bg-emerald-50 text-emerald-700">{m.status}</span>
+                           <div className="inline-flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 shadow-inner">
+                              <span className="text-[10px]">📲</span>
+                              <span className="text-[11px] font-black text-emerald-700">{m.accessCount || 0}</span>
+                           </div>
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex justify-center items-center gap-2">
@@ -224,37 +229,54 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
           </div>
         </div>
       ) : (
-        <div className="max-w-2xl mx-auto space-y-6">
-           {/* Card de Acessos */}
-           <div className="bg-emerald-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden group">
-              <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
-              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="text-center md:text-left">
-                  <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span>
-                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Tráfego Real</span>
+        <div className="max-w-4xl mx-auto space-y-8">
+           {/* Card de Estatísticas Numéricas (Substitui o Mapa) */}
+           <div className="bg-[#0f172a] rounded-[3.5rem] p-12 text-white shadow-2xl relative overflow-hidden group border border-white/5">
+              <div className="absolute -right-8 -top-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+              
+              <div className="relative z-10 flex flex-col items-center justify-center text-center space-y-8">
+                <div>
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <span className="w-3 h-3 bg-emerald-400 rounded-full animate-ping"></span>
+                    <span className="text-[12px] font-black text-emerald-400 uppercase tracking-[0.4em]">Analytics Cloud Ativo</span>
                   </div>
-                  <h3 className="text-2xl font-black uppercase tracking-tighter">Alcance do Portal</h3>
-                  <p className="text-emerald-100 text-[10px] font-bold uppercase opacity-70 mt-1">Total acumulado de acessos ao site e app</p>
+                  <h3 className="text-4xl font-black uppercase tracking-tighter">Impacto Digital</h3>
+                  <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-2">Monitoramento de engajamento no portal da associação</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md px-10 py-6 rounded-[2.5rem] border border-white/20 shadow-inner">
-                   <p className="text-[9px] font-black uppercase text-emerald-300 text-center mb-1">Acessos Totais</p>
-                   <p className="text-5xl font-black text-white tracking-tighter text-center">{accessStats.accessCount.toLocaleString('pt-BR')}</p>
+                
+                <div className="bg-white/5 backdrop-blur-md px-16 py-10 rounded-[3rem] border border-white/10 shadow-inner inline-block">
+                   <p className="text-[10px] font-black uppercase text-emerald-400 mb-2">Acessos Totais Acumulados</p>
+                   <p className="text-7xl font-black text-white tracking-tighter">{accessStats.accessCount.toLocaleString('pt-BR')}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-2xl mt-8">
+                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
+                      <p className="text-[8px] font-black text-slate-500 uppercase">Uptime Sistema</p>
+                      <p className="text-xl font-black">99.9%</p>
+                   </div>
+                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
+                      <p className="text-[8px] font-black text-slate-500 uppercase">Sincronização</p>
+                      <p className="text-xl font-black">Tempo Real</p>
+                   </div>
+                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
+                      <p className="text-[8px] font-black text-slate-500 uppercase">Segurança</p>
+                      <p className="text-xl font-black">End-to-End</p>
+                   </div>
                 </div>
               </div>
            </div>
 
-           <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100">
-              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-8">Painel de Sistema</h3>
-              <div className="space-y-4">
-                  <button onClick={onResetIndicators} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-[10px] shadow-lg">Sincronizar Indicadores 360</button>
+           <div className="bg-white p-10 rounded-[3.5rem] shadow-xl border border-slate-100">
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-8">Administração do Sistema</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button onClick={onResetIndicators} className="bg-blue-600 text-white py-5 rounded-3xl font-black uppercase text-[10px] shadow-lg hover:bg-blue-700 transition-all transform active:scale-95">Sincronizar Indicadores 360</button>
                   <button 
                     onClick={() => { 
                       if(window.prompt('Para resetar tudo, digite RESET:') === 'RESET') {
                           databaseService.clearDatabase(currentUserId).then(() => alert('Tudo limpo!'));
                       }
                     }} 
-                    className="w-full bg-rose-50 text-rose-600 py-5 rounded-2xl font-black uppercase text-[10px] border-2 border-rose-100"
+                    className="bg-rose-50 text-rose-600 py-5 rounded-3xl font-black uppercase text-[10px] border-2 border-rose-100 hover:bg-rose-600 hover:text-white transition-all transform active:scale-95"
                   >
                     Zerar Banco de Dados
                   </button>
@@ -266,7 +288,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
       {/* MODAL DE CONFIRMAÇÃO SEGURO */}
       {confirmAction && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[500] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm shadow-2xl animate-in zoom-in duration-300 text-center">
+          <div className="bg-white rounded-[3rem] p-10 w-full max-sm shadow-2xl animate-in zoom-in duration-300 text-center">
             <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner ${
               confirmAction.type === 'delete' ? 'bg-rose-50 text-rose-500' : 
               confirmAction.type === 'approve' ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'

@@ -114,6 +114,8 @@ const App: React.FC = () => {
         alert('Seu cadastro está pendente de aprovação pela diretoria.');
       } else {
         setAuthState({ user: { id: user.id, name: user.fullName, role: user.role || UserRole.ACS } });
+        // Incrementar acesso individual
+        databaseService.incrementMemberAccessCount(user.id);
         setShowUserLogin(false);
         setLoginForm({ cpf: '', password: '' });
       }
@@ -153,6 +155,7 @@ const App: React.FC = () => {
       status: 'Pendente',
       registrationDate: new Date().toISOString(),
       role: UserRole.ACS,
+      accessCount: 0
     };
     
     await databaseService.saveMember(newMember);
@@ -162,7 +165,7 @@ const App: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-emerald-900 flex flex-col items-center justify-center p-6 text-white text-center">
-        <Logo className="w-20 h-20 mb-6 animate-pulse" />
+        <Logo className="w-24 h-24 mb-6 animate-pulse" />
         <h2 className="text-xl font-black uppercase tracking-tighter">Sincronizando Portal...</h2>
         <p className="text-[10px] text-emerald-400 mt-2 uppercase tracking-widest">Aguardando resposta do servidor Cloud</p>
       </div>
@@ -200,12 +203,15 @@ const App: React.FC = () => {
     >
       {activeTab === 'dashboard' && (
         <div className="space-y-8 animate-in fade-in duration-500">
-           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="text-center md:text-left">
-                <h2 className="text-4xl font-black text-emerald-900 tracking-tight uppercase leading-none">Portal ACS Mulungu do Morro</h2>
-                <p className="text-slate-500 font-medium italic mt-2">
-                  {authState.user?.id === 'guest' ? 'Bem-vindo(a) ao portal da associação' : `Olá, ${authState.user?.name}`}
-                </p>
+           <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white p-8 rounded-[3rem] shadow-sm border border-emerald-50">
+              <div className="flex items-center gap-6 text-center md:text-left">
+                <Logo className="w-24 h-24 md:w-28 md:h-28" />
+                <div>
+                  <h2 className="text-4xl font-black text-emerald-900 tracking-tight uppercase leading-none">Portal ACS Mulungu</h2>
+                  <p className="text-slate-500 font-medium italic mt-2">
+                    {authState.user?.id === 'guest' ? 'Bem-vindo(a) ao portal da associação' : `Olá, ${authState.user?.name}`}
+                  </p>
+                </div>
               </div>
               {authState.user?.id === 'guest' && (
                 <button onClick={() => setRegistrationState('form')} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition-all uppercase tracking-widest text-[10px]">
@@ -223,22 +229,22 @@ const App: React.FC = () => {
               <button onClick={() => setActiveTab('indicators')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all">📊</div>
                 <h3 className="text-xl font-bold text-slate-800">Indicadores</h3>
-                <p className="text-slate-500 text-sm mt-2 tracking-tight">Previne Brasil e Rankings.</p>
+                <p className="text-slate-500 text-sm mt-2 tracking-tight">Previne Brasil.</p>
               </button>
               <button onClick={() => setActiveTab('treasury')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-amber-600 group-hover:text-white transition-all">⚖️</div>
                 <h3 className="text-xl font-bold text-slate-800">Tesouraria</h3>
-                <p className="text-slate-500 text-sm mt-2 tracking-tight">Transparência Financeira.</p>
+                <p className="text-slate-500 text-sm mt-2 tracking-tight">Transparência.</p>
               </button>
               <button onClick={() => setActiveTab('profile')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all">🪪</div>
                 <h3 className="text-xl font-bold text-slate-800">Carteirinha</h3>
-                <p className="text-slate-500 text-sm mt-2 tracking-tight">Dados e Identificação.</p>
+                <p className="text-slate-500 text-sm mt-2 tracking-tight">Identidade Digital.</p>
               </button>
             </div>
             
             <div className="bg-emerald-900 rounded-[3rem] p-10 md:p-20 text-white relative overflow-hidden shadow-2xl">
-              <h2 className="text-5xl font-black mb-6 leading-tight max-w-xl text-left">Tecnologia a serviço do Agente.</h2>
+              <h2 className="text-5xl font-black mb-6 leading-tight max-w-xl text-left uppercase tracking-tighter">Tecnologia a serviço do Agente.</h2>
               <p className="text-emerald-100 text-xl opacity-80 leading-relaxed max-w-lg mb-10 font-medium text-left">
                 Sincronização em tempo real. Seus dados estão protegidos na nuvem.
               </p>
@@ -273,7 +279,7 @@ const App: React.FC = () => {
           <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl max-md w-full relative">
             <button onClick={() => setShowUserLogin(false)} className="absolute top-6 right-6 text-slate-300 hover:text-slate-500 text-2xl">✕</button>
             <div className="text-center mb-8">
-              <Logo className="w-16 h-16 mx-auto mb-4" />
+              <Logo className="w-20 h-20 mx-auto mb-4" />
               <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Entrar no Portal</h3>
             </div>
             <form onSubmit={handleLogin} className="space-y-4">

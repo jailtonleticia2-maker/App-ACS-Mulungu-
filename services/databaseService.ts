@@ -13,7 +13,9 @@ import {
   writeBatch,
   getDocs,
   increment,
-  updateDoc
+  updateDoc,
+  addDoc,
+  limit
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance, PSFRankingData, PSF_LIST } from "../types";
 
@@ -53,8 +55,17 @@ export const databaseService = {
     try {
       await updateDoc(statsRef, { accessCount: increment(1) });
     } catch (e) {
-      // Se o documento não existir, cria-o
       await setDoc(statsRef, { accessCount: 1 }, { merge: true });
+    }
+  },
+
+  incrementMemberAccessCount: async (memberId: string) => {
+    if (!memberId || memberId === 'guest') return;
+    const memberRef = doc(db, "members", memberId);
+    try {
+      await updateDoc(memberRef, { accessCount: increment(1) });
+    } catch (e) {
+      // Se o campo não existir, ele será criado pelo merge no primeiro save
     }
   },
 
@@ -238,4 +249,4 @@ export const databaseService = {
     });
     await batch.commit();
   }
-  };
+};
