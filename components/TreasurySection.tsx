@@ -212,7 +212,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-emerald-100 relative overflow-hidden">
-                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4">Entrada Bruta (+)</p>
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4">SALDO ANTERIOR (+)</p>
                 <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
                   {formatCurrency(currentMonthData?.income || 0)}
                 </h3>
@@ -220,7 +220,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
               </div>
 
               <div className={`p-8 rounded-[2.5rem] shadow-sm border relative overflow-hidden transition-colors ${monthBalance >= 0 ? 'bg-emerald-900 text-white border-emerald-900' : 'bg-rose-900 text-white border-rose-900'}`}>
-                <p className="text-[10px] font-black uppercase tracking-widest mb-4 opacity-70">Saldo Final Líquido (=)</p>
+                <p className="text-[10px] font-black uppercase tracking-widest mb-4 opacity-70">SALDO ATUAL (=)</p>
                 <h3 className="text-4xl font-black tracking-tighter">
                   {formatCurrency(monthBalance)}
                 </h3>
