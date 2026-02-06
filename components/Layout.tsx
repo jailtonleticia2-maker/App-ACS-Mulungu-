@@ -17,18 +17,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
   
   const menuItems = [
     { id: 'dashboard', label: 'Início', icon: '🏠' },
-    { id: 'best-practices', label: 'Boas Práticas', icon: '✅' },
     { id: 'indicators', label: 'Indicadores', icon: '📊' },
     { id: 'treasury', label: 'Tesouraria', icon: '⚖️' },
+    { id: 'association-docs', label: 'Documentos', icon: '📂' }, // Nova aba adicionada
     { id: 'profile', label: 'Minha Carteirinha', icon: '🪪' },
     { id: 'news', label: 'Notícias MS', icon: '📜' },
-    { id: 'members', label: 'Gestão de ACS', icon: '⚙️', restricted: true },
+    { id: 'members', label: 'Gestão', icon: '⚙️', restricted: true },
   ];
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
       {/* Sidebar / Menu Inferior Mobile */}
-      <aside className="w-full md:w-64 bg-emerald-900 text-white flex-shrink-0 no-print z-50">
+      <aside className="w-full md:w-64 bg-emerald-900 text-white flex-shrink-0 no-print z-50 flex flex-col">
         <div className="p-6 hidden md:flex items-center space-x-3">
           <Logo className="w-10 h-10" />
           <div>
@@ -40,16 +40,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
         {/* Menu Desktop */}
         <nav className="mt-6 px-4 space-y-1 hidden md:block">
           {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === item.id ? 'bg-emerald-800 text-white shadow-inner border-l-4 border-emerald-400' : 'hover:bg-emerald-800/50 text-emerald-100'
-              } ${item.restricted ? 'mt-8 border-t border-emerald-800/50 pt-4 opacity-70 hover:opacity-100' : ''}`}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
-            </button>
+            (!item.restricted || (userRole === UserRole.ADMIN)) && (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeTab === item.id ? 'bg-emerald-800 text-white shadow-inner border-l-4 border-emerald-400' : 'hover:bg-emerald-800/50 text-emerald-100'
+                } ${item.restricted ? 'mt-8 border-t border-emerald-800/50 pt-4 opacity-70 hover:opacity-100' : ''}`}
+              >
+                <span className="text-xl">{item.icon}</span>
+                <span className="font-medium">{item.label}</span>
+              </button>
+            )
           ))}
         </nav>
 

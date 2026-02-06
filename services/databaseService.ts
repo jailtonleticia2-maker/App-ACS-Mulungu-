@@ -15,7 +15,8 @@ import {
   increment,
   updateDoc,
   getDoc,
-  serverTimestamp
+  serverTimestamp,
+  deleteField
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance, PSFRankingData, PSF_LIST } from "../types";
 
@@ -49,39 +50,38 @@ const STATUS_POINTS: Record<string, number> = {
 };
 
 export const databaseService = {
-  // --- MONITORAMENTO REAL-TIME ---
+  // --- MONITORAMENTO ---
   updateHeartbeat: async (memberId: string, isOnline: boolean) => {
     if (!memberId || memberId === 'guest') return;
-    const memberRef = doc(db, "members", memberId);
     try {
+      const memberRef = doc(db, "members", memberId);
       await updateDoc(memberRef, { 
         isOnline: isOnline,
         lastSeen: new Date().toISOString()
       });
     } catch (e) {
-      console.error("Erro ao atualizar heartbeat:", e);
+      console.error("Erro heartbeat:", e);
     }
   },
 
   setMemberOnlineStatus: async (memberId: string, status: boolean) => {
     if (!memberId || memberId === 'guest') return;
-    const memberRef = doc(db, "members", memberId);
     try {
+      const memberRef = doc(db, "members", memberId);
       await updateDoc(memberRef, { 
         isOnline: status,
         lastSeen: new Date().toISOString()
       });
     } catch (e) {
-      console.error("Erro ao atualizar status online:", e);
+      console.error("Erro status:", e);
     }
   },
 
   incrementDailyAccess: async (memberId: string) => {
     if (!memberId || memberId === 'guest') return;
-    const today = new Date().toISOString().split('T')[0];
-    const memberRef = doc(db, "members", memberId);
-    
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const memberRef = doc(db, "members", memberId);
       const snap = await getDoc(memberRef);
       if (snap.exists()) {
         const data = snap.data() as Member;
@@ -101,15 +101,16 @@ export const databaseService = {
         }
       }
     } catch (e) {
-      console.error("Erro ao incrementar acesso diário:", e);
+      console.error("Erro acesso:", e);
     }
   },
 
   incrementAccessCount: async () => {
-    const statsRef = doc(db, "system", "stats");
     try {
+      const statsRef = doc(db, "system", "stats");
       await updateDoc(statsRef, { accessCount: increment(1) });
     } catch (e) {
+      const statsRef = doc(db, "system", "stats");
       await setDoc(statsRef, { accessCount: 1 }, { merge: true });
     }
   },
@@ -124,46 +125,63 @@ export const databaseService = {
     });
   },
 
+  // --- DOCUMENTOS ---
+  subscribeDocuments: (callback: (docs: Record<string, string>) => void) => {
+    return onSnapshot(collection(db, "system_documents"), (snapshot) => {
+      const docs: Record<string, string> = {};
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.content) docs[docSnap.id] = data.content;
+      });
+      callback(docs);
+    });
+  },
+
+  saveDocument: async (docId: string, base64Data: string) => {
+    if (base64Data.length > 1048487) {
+      throw new Error("Arquivo muito grande (Limite 1MB). Use o site iLovePDF para comprimir.");
+    }
+    const docRef = doc(db, "system_documents", docId);
+    await setDoc(docRef, { 
+      content: base64Data,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  deleteDocument: async (docId: string) => {
+    const docRef = doc(db, "system_documents", docId);
+    await deleteDoc(docRef);
+    const legacyRef = doc(db, "system", "documents");
+    try {
+      await updateDoc(legacyRef, { [docId]: deleteField() });
+    } catch (e) {}
+  },
+
   // --- MEMBROS ---
   subscribeMembers: (callback: (members: Member[]) => void, onError: (err: any) => void) => {
-    try {
-      const q = query(collection(db, "members"), orderBy("registrationDate", "desc"));
-      return onSnapshot(q, 
-        (snapshot) => {
-          const members = snapshot.docs.map(doc => ({ ...doc.data() as Member, id: doc.id }));
-          callback(members);
-        },
-        (error) => {
-          console.error("Erro no Snapshot de Membros:", error);
-          onError(error);
-        }
-      );
-    } catch (err) {
-      console.error("Erro ao assinar membros:", err);
-      return () => {};
-    }
+    const q = query(collection(db, "members"), orderBy("registrationDate", "desc"));
+    return onSnapshot(q, (snapshot) => {
+      const members = snapshot.docs.map(d => ({ ...d.data() as Member, id: d.id }));
+      callback(members);
+    }, (error) => onError(error));
   },
 
   saveMember: async (member: Member) => {
-    if (!member.id) throw new Error("ID do membro é obrigatório para salvar.");
+    if (!member.id) throw new Error("ID obrigatório");
     const memberRef = doc(db, "members", member.id);
-    const dataToSave = cleanData(member);
-    await setDoc(memberRef, dataToSave, { merge: true });
+    await setDoc(memberRef, cleanData(member), { merge: true });
   },
 
   deleteMember: async (id: string) => {
-    if (!id) throw new Error("ID é obrigatório para exclusão.");
-    const memberRef = doc(db, "members", id);
-    await deleteDoc(memberRef);
+    await deleteDoc(doc(db, "members", id));
   },
 
   // --- INDICADORES ---
   subscribeAPS: (callback: (indicators: APSIndicator[]) => void, onError: (err: any) => void) => {
     const q = query(collection(db, "aps_indicators"), orderBy("code", "asc"));
-    return onSnapshot(q, 
-      (snapshot) => callback(snapshot.docs.map(doc => doc.data() as APSIndicator)),
-      (error) => onError(error)
-    );
+    return onSnapshot(q, (snapshot) => {
+      callback(snapshot.docs.map(d => d.data() as APSIndicator));
+    }, (error) => onError(error));
   },
 
   updateAPS: async (indicator: APSIndicator) => {
@@ -172,30 +190,22 @@ export const databaseService = {
 
   subscribePSFRankings: (callback: (rankings: PSFRankingData[]) => void) => {
     return onSnapshot(collection(db, "psf_rankings"), (snapshot) => {
-      callback(snapshot.docs.map(doc => doc.data() as PSFRankingData));
+      callback(snapshot.docs.map(d => d.data() as PSFRankingData));
     });
   },
 
   updatePSFRanking: async (psfName: string, indicators: APSIndicator[]) => {
-    const totalScore = indicators.reduce((acc, curr) => {
-      const points = STATUS_POINTS[curr.status] || 0;
-      return acc + points;
-    }, 0);
-    
+    const totalScore = indicators.reduce((acc, curr) => acc + (STATUS_POINTS[curr.status] || 0), 0);
     await setDoc(doc(db, "psf_rankings", psfName.replace(/\s+/g, '_')), {
-      psfName,
-      indicators,
-      totalScore,
-      lastUpdate: new Date().toISOString()
+      psfName, indicators, totalScore, lastUpdate: new Date().toISOString()
     });
   },
 
   subscribeDental: (callback: (indicators: DentalIndicator[]) => void, onError: (err: any) => void) => {
     const q = query(collection(db, "dental_indicators"), orderBy("code", "asc"));
-    return onSnapshot(q, 
-      (snapshot) => callback(snapshot.docs.map(doc => doc.data() as DentalIndicator)),
-      (error) => onError(error)
-    );
+    return onSnapshot(q, (snapshot) => {
+      callback(snapshot.docs.map(d => d.data() as DentalIndicator));
+    }, (error) => onError(error));
   },
 
   updateDental: async (indicator: DentalIndicator) => {
@@ -224,7 +234,7 @@ export const databaseService = {
   subscribeMonthlyHistory: (year: number, callback: (balances: MonthlyBalance[]) => void) => {
     const q = query(collection(db, "treasury_history"), where("year", "==", year));
     return onSnapshot(q, (snapshot) => {
-      const balances = snapshot.docs.map(doc => doc.data() as MonthlyBalance);
+      const balances = snapshot.docs.map(d => d.data() as MonthlyBalance);
       balances.sort((a, b) => b.month - a.month);
       callback(balances);
     });
@@ -251,45 +261,32 @@ export const databaseService = {
       "PSF NOEME TELES": ["61.11%", "53.33%", "61.50%", "58.33%", "70.92%", "52.91%", "47.27%"]
     };
 
-    const getStatusFromPerc = (percStr: string, code: string) => {
-      const val = parseFloat(percStr.replace('%', ''));
-      if (code === 'C1') return val > 50 ? 'Ótimo' : val > 30 ? 'Bom' : 'Suficiente';
-      if (code === 'C2') return val > 75 ? 'Ótimo' : val > 50 ? 'Bom' : val > 25 ? 'Regular' : 'Suficiente';
-      return val > 75 ? 'Ótimo' : val > 50 ? 'Bom' : val > 25 ? 'Regular' : 'Suficiente';
-    };
-
     PSF_LIST.forEach(psf => {
       const results = officialResults[psf] || ["0%", "0%", "0%", "0%", "0%", "0%", "0%"];
-      const unitIndicators = aps.map((a, i) => ({
-        ...a,
-        cityValue: results[i],
-        status: getStatusFromPerc(results[i], a.code) as any
-      }));
-
-      const totalScore = unitIndicators.reduce((acc, curr) => {
-        return acc + (STATUS_POINTS[curr.status] || 0);
-      }, 0);
-
+      const unitIndicators = aps.map((a, i) => {
+        const val = parseFloat(results[i].replace('%', ''));
+        let st: any = 'Regular';
+        if (a.code === 'C1') st = val > 50 ? 'Ótimo' : val > 30 ? 'Bom' : 'Suficiente';
+        else st = val > 75 ? 'Ótimo' : val > 50 ? 'Bom' : val > 25 ? 'Regular' : 'Suficiente';
+        return { ...a, cityValue: results[i], status: st };
+      });
+      const totalScore = unitIndicators.reduce((acc, curr) => acc + (STATUS_POINTS[curr.status] || 0), 0);
       batch.set(doc(db, "psf_rankings", psf.replace(/\s+/g, '_')), {
-        psfName: psf,
-        indicators: unitIndicators,
-        totalScore,
-        lastUpdate: new Date().toISOString()
+        psfName: psf, indicators: unitIndicators, totalScore, lastUpdate: new Date().toISOString()
       });
     });
-
     await batch.commit();
   },
 
   clearDatabase: async (keepUserId: string) => {
     const batch = writeBatch(db);
     const membersSnap = await getDocs(collection(db, "members"));
-    membersSnap.forEach((doc) => { if (doc.id !== keepUserId) batch.delete(doc.ref); });
+    membersSnap.forEach((d) => { if (d.id !== keepUserId) batch.delete(d.ref); });
     const historySnap = await getDocs(collection(db, "treasury_history"));
-    historySnap.forEach((doc) => batch.delete(doc.ref));
+    historySnap.forEach((d) => batch.delete(d.ref));
     const treasuryRef = doc(db, "treasury", "summary");
     batch.set(treasuryRef, {
-      id: 'summary', totalIn: 0, totalOut: 0, monthlyFee: 20, lastUpdate: new Date().toISOString(), updatedBy: 'Sistema (Reset)'
+      id: 'summary', totalIn: 0, totalOut: 0, monthlyFee: 20, lastUpdate: new Date().toISOString(), updatedBy: 'Reset'
     });
     await batch.commit();
   }
