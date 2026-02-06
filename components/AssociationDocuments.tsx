@@ -126,7 +126,7 @@ const AssociationDocuments: React.FC<AssociationDocumentsProps> = ({ isAdmin = f
     },
     {
       id: 'ata',
-      title: 'Ata de Fundação',
+      title: 'Ata atualizada da Associação',
       description: 'Documento completo da Ata nº 117 (Fundação e Eleição).',
       icon: '✍️',
       color: 'bg-blue-50 text-blue-600',
