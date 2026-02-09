@@ -62,7 +62,6 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    // Só inicia se o databaseService estiver definido e exportado corretamente
     if (databaseService && authState.user && authState.user.id !== 'guest') {
       databaseService.updateHeartbeat(authState.user.id, true);
       const heartbeatInterval = setInterval(() => {
@@ -162,6 +161,7 @@ const App: React.FC = () => {
     >
       {activeTab === 'dashboard' && (
         <div className="space-y-8 animate-in fade-in duration-500">
+           {/* Header do Portal */}
            <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white p-8 rounded-[3rem] shadow-sm border border-emerald-50">
               <div className="flex items-center gap-6">
                 <Logo className="w-24 h-24" />
@@ -175,6 +175,7 @@ const App: React.FC = () => {
               )}
             </div>
 
+            {/* Grid de Acessos (Abas Principais) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
               <button onClick={() => setActiveTab('best-practices')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all group">
                 <div className="w-14 h-14 bg-yellow-50 text-yellow-600 rounded-2xl flex items-center justify-center text-2xl mb-6">✅</div>
@@ -196,6 +197,15 @@ const App: React.FC = () => {
                 <h3 className="text-xl font-bold text-slate-800">Carteirinha</h3>
                 <p className="text-slate-500 text-sm mt-2">Identidade Digital.</p>
               </button>
+            </div>
+
+            {/* Banner de Tecnologia e Segurança (Abaixo das abas/cards) */}
+            <div className="bg-emerald-900 rounded-[3rem] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-8 text-white/5 text-9xl font-black select-none pointer-events-none group-hover:scale-110 transition-transform">☁️</div>
+              <div className="relative z-10 flex flex-col items-center md:items-start text-center md:text-left">
+                <h3 className="text-3xl md:text-4xl font-black uppercase tracking-tighter leading-none mb-2">Tecnologia a serviço do agente</h3>
+                <p className="text-emerald-400 text-sm md:text-base font-bold uppercase tracking-widest opacity-90 italic">seu dados estao seguros na nuvem</p>
+              </div>
             </div>
         </div>
       )}

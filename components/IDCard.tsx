@@ -25,6 +25,8 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
 
   const handleExportPDF = () => {
     setIsPreparing(true);
+    
+    // Captura o HTML dos dois lados da carteirinha
     const frontEl = document.getElementById(`card-front-${member.id}`);
     const backEl = document.getElementById(`card-back-${member.id}`);
 
@@ -34,84 +36,52 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
       return;
     }
 
-    const htmlContent = `
-      <!DOCTYPE html>
+    const printContent = `
       <html>
         <head>
-          <title>CARTEIRA_ACS_${member.fullName.replace(/\s+/g, '_')}</title>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <script src="https://cdn.tailwindcss.com"></script>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { 
               font-family: 'Inter', sans-serif; 
-              margin: 0; 
-              padding: 0; 
-              display: flex; 
-              flex-direction: column; 
-              align-items: center; 
-              background: #f1f5f9; 
-              min-height: 100vh;
-            }
-            .print-wrapper {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              gap: 10mm;
-              padding: 20mm;
+              margin: 0; padding: 10mm; 
+              display: flex; flex-direction: column; align-items: center; gap: 10mm;
             }
             .card-print { 
-              width: 85.6mm; 
-              height: 53.98mm; 
-              border-radius: 3mm; 
-              border: 0.2mm solid #e2e8f0; 
-              overflow: hidden;
-              position: relative; 
-              background: white;
-              box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-              -webkit-print-color-adjust: exact; 
-              print-color-adjust: exact;
+              width: 85.6mm; height: 53.98mm; 
+              border-radius: 3mm; border: 0.1mm solid #ccc; 
+              overflow: hidden; position: relative; background: white;
+              -webkit-print-color-adjust: exact; print-color-adjust: exact;
+              page-break-inside: avoid;
             }
-            @media print {
-              body { background: white; padding: 0; margin: 0; }
-              .no-print { display: none !important; }
-              .print-wrapper { padding: 10mm; gap: 5mm; }
-              .card-print { 
-                box-shadow: none;
-                border: 0.1mm solid #ccc;
-                page-break-inside: avoid;
-                margin-bottom: 5mm;
-              }
-              @page { size: auto; margin: 0; }
-            }
+            @page { size: A4; margin: 0; }
           </style>
+          <script src="https://cdn.tailwindcss.com"></script>
         </head>
-        <body>
-          <div class="no-print" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; color: white;">
-            <div style="background: white; padding: 40px; border-radius: 32px; color: #1e293b; max-width: 400px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
-              <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
-              <h3 style="margin: 0 0 12px 0; font-weight: 900; color: #064e3b; font-size: 20px; text-transform: uppercase; letter-spacing: -0.5px;">Pronto para Salvar</h3>
-              <p style="margin: 0 0 24px 0; color: #64748b; font-size: 14px; line-height: 1.5;">Para garantir que os dois lados saiam na mesma folha, selecione o papel <b>A4</b> no destino da impressão.</p>
-              <button style="background: #064e3b; color: white; width: 100%; padding: 18px; border-radius: 16px; font-weight: 900; text-transform: uppercase; border: none; cursor: pointer; font-size: 14px; letter-spacing: 1px;" onclick="window.print()">Imprimir / Salvar PDF</button>
-              <button style="background: transparent; color: #94a3b8; width: 100%; padding: 12px; margin-top: 8px; font-weight: 700; text-transform: uppercase; border: none; cursor: pointer; font-size: 11px;" onclick="window.close()">Cancelar</button>
-            </div>
-          </div>
-          <div class="print-wrapper">
-            <div class="card-print">${frontEl.innerHTML}</div>
-            <div class="card-print">${backEl.innerHTML}</div>
-          </div>
+        <body onload="window.print();">
+          <div class="card-print">${frontEl.innerHTML}</div>
+          <div class="card-print">${backEl.innerHTML}</div>
         </body>
       </html>
     `;
 
-    const printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.write(htmlContent);
-      printWin.document.close();
-      setTimeout(() => setIsPreparing(false), 1000);
+    // No Android Mobile, window.open é bloqueado. Usamos um Iframe oculto.
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    const iframeDoc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(printContent);
+      iframeDoc.close();
+      
+      // Remove o iframe após um tempo (suficiente para o Android abrir a tela de PDF/Impressão)
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        setIsPreparing(false);
+      }, 3000);
     } else {
-      alert("Bloqueador de pop-ups ativo.");
+      alert("Erro ao iniciar gerador de PDF.");
       setIsPreparing(false);
     }
   };
@@ -123,13 +93,13 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
            <Logo className="w-6 h-6" />
            <div className="leading-none text-left">
              <h1 className="text-[7.5px] font-black text-emerald-900 uppercase tracking-tighter">AACSM</h1>
-             <p className="text-[3.5px] text-slate-500 font-bold uppercase">Assoc. Agentes Comunitários de Saúde</p>
+             <p className="text-[3.5px] text-slate-500 font-bold uppercase">Assoc. Agentes de Saúde</p>
            </div>
         </div>
         <div className="text-right flex items-center gap-2">
            <div className="h-6 w-[0.2mm] bg-slate-200"></div>
            <div className="leading-none">
-             <h2 className="text-[7px] font-black text-emerald-800 uppercase italic">ACS MULUNGU DO MORRO</h2>
+             <h2 className="text-[7px] font-black text-emerald-800 uppercase italic">ACS MULUNGU</h2>
              <p className="text-[4px] text-emerald-600 font-black uppercase">Bahia - Brasil</p>
            </div>
         </div>
@@ -148,7 +118,7 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
           </div>
           <div className="grid grid-cols-2 gap-1">
             <div>
-              <label className="text-[4.5px] text-emerald-900 font-black uppercase tracking-widest block opacity-70">Data Nasc.:</label>
+              <label className="text-[4.5px] text-emerald-900 font-black uppercase tracking-widest block opacity-70">Nasc.:</label>
               <p className="text-[7.5px] font-black text-slate-800">{formatBirthDate(member.birthDate)}</p>
             </div>
             <div>
@@ -159,16 +129,6 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
           <div>
             <label className="text-[4.5px] text-emerald-900 font-black uppercase tracking-widest block opacity-70">Cargo:</label>
             <p className="text-[7.5px] font-black text-emerald-800 uppercase">Agente Comunitário de Saúde</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1 pt-0.5">
-             <div>
-                <label className="text-[4.5px] text-emerald-900 font-black uppercase tracking-widest block opacity-70">Emissão:</label>
-                <p className="text-[6.5px] font-black text-slate-600">{new Date().toLocaleDateString('pt-BR')}</p>
-             </div>
-             <div>
-                <label className="text-[4.5px] text-emerald-900 font-black uppercase tracking-widest block opacity-70">Validade:</label>
-                <p className="text-[6.5px] font-black text-slate-600">INDETERMINADA</p>
-             </div>
           </div>
         </div>
 
@@ -195,25 +155,20 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
            </div>
            <div className="space-y-2">
              <div>
-               <label className="text-[4.5px] text-slate-400 font-black uppercase tracking-widest block">Unidade de Saúde / PSF</label>
+               <label className="text-[4.5px] text-slate-400 font-black uppercase block">Unidade / PSF</label>
                <p className="text-[8px] font-black text-slate-800 uppercase">{member.workplace || 'SECRETARIA DE SAÚDE'}</p>
              </div>
              <div className="grid grid-cols-2 gap-4">
                <div>
-                 <label className="text-[4.5px] text-slate-400 font-black uppercase tracking-widest block">Equipe / Microárea</label>
-                 <p className="text-[7.5px] font-black text-emerald-800 uppercase">{member.team || '---'} / {member.microArea || '---'}</p>
+                 <label className="text-[4.5px] text-slate-400 font-black uppercase block">Equipe / Micro</label>
+                 <p className="text-[7.5px] font-black text-emerald-800 uppercase">{member.team || '--'} / {member.microArea || '--'}</p>
                </div>
                <div>
-                 <label className="text-[4.5px] text-slate-400 font-black uppercase tracking-widest block">Zona de Atuação</label>
+                 <label className="text-[4.5px] text-slate-400 font-black uppercase block">Zona</label>
                  <p className="text-[7.5px] font-black text-slate-800 uppercase">{member.areaType || 'URBANA'}</p>
                </div>
              </div>
            </div>
-        </div>
-        <div className="mt-auto flex flex-col items-center gap-1">
-          <p className="text-[3.5px] font-black text-slate-400 uppercase tracking-tighter">Aponte a câmera para verificar autenticidade</p>
-          <div className="w-32 h-[0.3pt] bg-slate-400"></div>
-          <p className="text-[4px] font-black text-slate-400 uppercase tracking-tighter">Assinatura Digital Auditada AACSM</p>
         </div>
       </div>
       <div className="h-[1.5mm] bg-emerald-600 w-full relative z-10"></div>
@@ -240,7 +195,7 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
             disabled={isPreparing}
             className={`flex-1 bg-emerald-900 text-white px-8 py-5 rounded-2xl font-black uppercase text-[10px] shadow-xl flex items-center justify-center gap-3 hover:scale-105 transition-all ${isPreparing ? 'opacity-70 cursor-wait' : ''}`}
           >
-            {isPreparing ? '⏳ Preparando...' : '📄 Compartilhar via PDF'}
+            {isPreparing ? '⏳ Gerando...' : '📄 Salvar em PDF / Imprimir'}
           </button>
         </div>
       )}
