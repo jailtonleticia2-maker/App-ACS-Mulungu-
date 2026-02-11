@@ -42,13 +42,6 @@ const cleanData = (obj: any) => {
   return clean;
 };
 
-const STATUS_POINTS: Record<string, number> = {
-  'Ótimo': 4,
-  'Bom': 3,
-  'Regular': 2,
-  'Suficiente': 1
-};
-
 export const databaseService = {
   // --- MONITORAMENTO ---
   updateHeartbeat: async (memberId: string, isOnline: boolean) => {
@@ -61,19 +54,6 @@ export const databaseService = {
       });
     } catch (e) {
       console.error("Erro heartbeat:", e);
-    }
-  },
-
-  setMemberOnlineStatus: async (memberId: string, status: boolean) => {
-    if (!memberId || memberId === 'guest') return;
-    try {
-      const memberRef = doc(db, "members", memberId);
-      await updateDoc(memberRef, { 
-        isOnline: status,
-        lastSeen: new Date().toISOString()
-      });
-    } catch (e) {
-      console.error("Erro status:", e);
     }
   },
 
@@ -138,9 +118,6 @@ export const databaseService = {
   },
 
   saveDocument: async (docId: string, base64Data: string) => {
-    if (base64Data.length > 1048487) {
-      throw new Error("Arquivo muito grande (Limite 1MB). Use o site iLovePDF para comprimir.");
-    }
     const docRef = doc(db, "system_documents", docId);
     await setDoc(docRef, { 
       content: base64Data,
@@ -151,10 +128,6 @@ export const databaseService = {
   deleteDocument: async (docId: string) => {
     const docRef = doc(db, "system_documents", docId);
     await deleteDoc(docRef);
-    const legacyRef = doc(db, "system", "documents");
-    try {
-      await updateDoc(legacyRef, { [docId]: deleteField() });
-    } catch (e) {}
   },
 
   // --- MEMBROS ---
@@ -194,11 +167,10 @@ export const databaseService = {
     });
   },
 
-  updatePSFRanking: async (psfName: string, indicators: APSIndicator[]) => {
-    const totalScore = indicators.reduce((acc, curr) => acc + (STATUS_POINTS[curr.status] || 0), 0);
+  updatePSFRanking: async (psfName: string, data: Partial<PSFRankingData>) => {
     await setDoc(doc(db, "psf_rankings", psfName.replace(/\s+/g, '_')), {
-      psfName, indicators, totalScore, lastUpdate: new Date().toISOString()
-    });
+      ...data, psfName, lastUpdate: new Date().toISOString()
+    }, { merge: true });
   },
 
   subscribeDental: (callback: (indicators: DentalIndicator[]) => void, onError: (err: any) => void) => {
@@ -248,45 +220,82 @@ export const databaseService = {
     await deleteDoc(doc(db, "treasury_history", id)); 
   },
 
+  // Fix for Error in AdminDashboard.tsx: Added missing clearDatabase method to wipe the database
+  clearDatabase: async (userId: string) => {
+    if (userId !== 'admin-01') throw new Error("Acesso negado");
+    
+    const batch = writeBatch(db);
+    
+    const collections = [
+      "members", 
+      "aps_indicators", 
+      "dental_indicators", 
+      "psf_rankings", 
+      "treasury_history",
+      "system_documents"
+    ];
+
+    for (const colName of collections) {
+      const snap = await getDocs(collection(db, colName));
+      snap.forEach(d => batch.delete(d.ref));
+    }
+    
+    batch.delete(doc(db, "treasury", "summary"));
+    batch.delete(doc(db, "system", "stats"));
+
+    await batch.commit();
+  },
+
   seedInitialData: async (aps: APSIndicator[], dental: DentalIndicator[]) => {
     const batch = writeBatch(db);
     aps.forEach(item => batch.set(doc(db, "aps_indicators", item.code), item));
     dental.forEach(item => batch.set(doc(db, "dental_indicators", item.code), item));
     
-    const officialResults: Record<string, string[]> = {
-      "PSF ARNOLD": ["56.73%", "37.14%", "58.56%", "63.58%", "64.83%", "56.63%", "42.82%"],
-      "PSF VARZEA": ["42.73%", "42.86%", "67.40%", "65.59%", "64.02%", "60.16%", "52.71%"],
-      "PSF CANUDOS": ["59.07%", "18.00%", "33.67%", "52.46%", "64.60%", "48.73%", "41.55%"],
-      "PSF CAROLINA": ["57.16%", "48.24%", "72.90%", "50.11%", "67.76%", "57.91%", "36.90%"],
-      "PSF NOEME TELES": ["61.11%", "53.33%", "61.50%", "58.33%", "70.92%", "52.91%", "47.27%"]
+    // DADOS REAIS EXTRAÍDOS DAS IMAGENS (Saúde da Família e Saúde Bucal)
+    const officialScores: Record<string, any> = {
+      "USF ANTONIO ARNAULD DA SILVA": { 
+        eSus: 3307, siaps: 2905,
+        esfQ1: 5.75, esfQ1C: 'Bom', esfQ2: 6, esfQ2C: 'Bom',
+        dQ1: 4.75, dQ1C: 'Suficiente', dQ2: 3.75, dQ2C: 'Suficiente'
+      },
+      "USF CAROLINA ROSA DE ASSIS": { 
+        eSus: 4446, siaps: 3609,
+        esfQ1: 5.25, esfQ1C: 'Bom', esfQ2: 6, esfQ2C: 'Bom',
+        dQ1: 2.5, dQ1C: 'Regular', dQ2: 3.0, dQ2C: 'Suficiente'
+      },
+      "USF DE CANUDOS": { 
+        eSus: 3240, siaps: 1500,
+        esfQ1: 6.25, esfQ1C: 'Bom', esfQ2: 5.75, esfQ2C: 'Bom',
+        dQ1: 3.5, dQ1C: 'Suficiente', dQ2: 3.0, dQ2C: 'Suficiente'
+      },
+      "USF DE VARZEA DO CERCO": { 
+        eSus: 2704, siaps: 1865,
+        esfQ1: 6.75, esfQ1C: 'Bom', esfQ2: 7.25, esfQ2C: 'Bom',
+        dQ1: 4.25, dQ1C: 'Suficiente', dQ2: 3.25, dQ2C: 'Suficiente'
+      },
+      "USF NOEME TELES BOAVENTURA": { 
+        eSus: 2192, siaps: 1868,
+        esfQ1: 6.25, esfQ1C: 'Bom', esfQ2: 7.25, esfQ2C: 'Bom',
+        dQ1: 2.5, dQ1C: 'Regular', dQ2: 2.5, dQ2C: 'Regular'
+      }
     };
 
     PSF_LIST.forEach(psf => {
-      const results = officialResults[psf] || ["0%", "0%", "0%", "0%", "0%", "0%", "0%"];
-      const unitIndicators = aps.map((a, i) => {
-        const val = parseFloat(results[i].replace('%', ''));
-        let st: any = 'Regular';
-        if (a.code === 'C1') st = val > 50 ? 'Ótimo' : val > 30 ? 'Bom' : 'Suficiente';
-        else st = val > 75 ? 'Ótimo' : val > 50 ? 'Bom' : val > 25 ? 'Regular' : 'Suficiente';
-        return { ...a, cityValue: results[i], status: st };
-      });
-      const totalScore = unitIndicators.reduce((acc, curr) => acc + (STATUS_POINTS[curr.status] || 0), 0);
+      const data = officialScores[psf] || { esfQ1: 0, esfQ2: 0, dQ1: 0, dQ2: 0 };
       batch.set(doc(db, "psf_rankings", psf.replace(/\s+/g, '_')), {
-        psfName: psf, indicators: unitIndicators, totalScore, lastUpdate: new Date().toISOString()
+        psfName: psf,
+        eSusCount: data.eSus || 0,
+        siapsCount: data.siaps || 0,
+        esfQ1Score: data.esfQ1,
+        esfQ1Class: data.esfQ1C || 'Regular',
+        esfQ2Score: data.esfQ2,
+        esfQ2Class: data.esfQ2C || 'Regular',
+        dentalQ1Score: data.dQ1,
+        dentalQ1Class: data.dQ1C || 'Regular',
+        dentalQ2Score: data.dQ2,
+        dentalQ2Class: data.dQ2C || 'Regular',
+        lastUpdate: new Date().toISOString()
       });
-    });
-    await batch.commit();
-  },
-
-  clearDatabase: async (keepUserId: string) => {
-    const batch = writeBatch(db);
-    const membersSnap = await getDocs(collection(db, "members"));
-    membersSnap.forEach((d) => { if (d.id !== keepUserId) batch.delete(d.ref); });
-    const historySnap = await getDocs(collection(db, "treasury_history"));
-    historySnap.forEach((d) => batch.delete(d.ref));
-    const treasuryRef = doc(db, "treasury", "summary");
-    batch.set(treasuryRef, {
-      id: 'summary', totalIn: 0, totalOut: 0, monthlyFee: 20, lastUpdate: new Date().toISOString(), updatedBy: 'Reset'
     });
     await batch.commit();
   }

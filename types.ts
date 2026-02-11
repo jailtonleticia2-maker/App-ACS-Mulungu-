@@ -5,11 +5,12 @@ export enum UserRole {
 }
 
 export const PSF_LIST = [
-  "PSF CANUDOS",
-  "PSF CAROLINA",
-  "PSF VARZEA",
-  "PSF ARNOLD",
-  "PSF NOEME TELES"
+  "USF ANTONIO ARNAULD DA SILVA",
+  "USF CAROLINA ROSA DE ASSIS",
+  "USF DE CANUDOS",
+  "USF DE VARZEA DO CERCO",
+  "USF NOEME TELES BOAVENTURA",
+  "PSF ALAGADIÇO"
 ];
 
 export interface Member {
@@ -30,7 +31,7 @@ export interface Member {
   role: UserRole;
   accessCount?: number; 
   isOnline?: boolean; 
-  lastSeen?: string; // ISO String da última atividade (Heartbeat)
+  lastSeen?: string; 
   dailyAccessCount?: number; 
   lastDailyReset?: string; 
 }
@@ -46,8 +47,19 @@ export interface APSIndicator {
 
 export interface PSFRankingData {
   psfName: string;
-  indicators: APSIndicator[];
-  totalScore: number;
+  indicators?: APSIndicator[]; 
+  eSusCount: number;          
+  siapsCount: number;         
+  // Saúde da Família (eSF) - Componente de Qualidade
+  esfQ1Score: number;
+  esfQ1Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+  esfQ2Score: number;
+  esfQ2Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+  // Saúde Bucal (eSB) - Componente de Qualidade
+  dentalQ1Score: number;
+  dentalQ1Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+  dentalQ2Score: number;
+  dentalQ2Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
   lastUpdate: string;
 }
 
