@@ -18,7 +18,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
   setDentalIndicators,
   isAdmin 
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'populacao' | 'qualidade-esf' | 'qualidade-esb'>('populacao');
+  const [activeSubTab, setActiveSubTab] = useState<'populacao' | 'qualidade-esf' | 'qualidade-esb' | 'ranking'>('ranking');
   
   const [rankings, setRankings] = useState<PSFRankingData[]>([]);
   const [selectedPSFForEdit, setSelectedPSFForEdit] = useState<string | null>(null);
@@ -26,7 +26,6 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
 
   useEffect(() => {
     const unsub = databaseService.subscribePSFRankings((data) => {
-      // FILTRO RIGOROSO: Só permite equipes que estejam na PSF_LIST
       const filtered = data.filter(d => PSF_LIST.includes(d.psfName));
       
       if (filtered.length === 0) {
@@ -38,22 +37,21 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
           lastUpdate: '' 
         })));
       } else {
-        // Ordenar conforme a lista padrão
-        const sorted = [...filtered].sort((a, b) => PSF_LIST.indexOf(a.psfName) - PSF_LIST.indexOf(b.psfName));
-        setRankings(sorted);
+        setRankings(filtered);
       }
     });
     return () => unsub();
   }, []);
 
-  const totals = useMemo(() => {
-    return rankings.reduce((acc, curr) => ({
-      eSus: acc.eSus + (curr.eSusCount || 0),
-      siaps: acc.siaps + (curr.siapsCount || 0)
-    }), { eSus: 0, siaps: 0 });
+  // Cálculo do Ranking Geral (Baseado no Q2)
+  const sortedRanking = useMemo(() => {
+    return [...rankings].sort((a, b) => {
+      const scoreA = (a.esfQ2Score || 0) + (a.dentalQ2Score || 0);
+      const scoreB = (b.esfQ2Score || 0) + (b.dentalQ2Score || 0);
+      return scoreB - scoreA;
+    });
   }, [rankings]);
 
-  // Escala de cores conforme imagem oficial
   const colorMap: Record<string, { text: string, bg: string }> = {
     'Ótimo': { text: 'text-blue-600', bg: 'bg-blue-600' },
     'Bom': { text: 'text-green-600', bg: 'bg-green-600' },
@@ -98,13 +96,70 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         </div>
         
         <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-auto overflow-x-auto no-scrollbar">
-          <button onClick={() => setActiveSubTab('populacao')} className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all ${activeSubTab === 'populacao' ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-400'}`}>População SIAPS</button>
+          <button onClick={() => setActiveSubTab('ranking')} className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all ${activeSubTab === 'ranking' ? 'bg-emerald-900 shadow-lg text-white' : 'text-slate-400'}`}>Ranking 360</button>
           <button onClick={() => setActiveSubTab('qualidade-esf')} className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all ${activeSubTab === 'qualidade-esf' ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-400'}`}>Qualidade eSF</button>
           <button onClick={() => setActiveSubTab('qualidade-esb')} className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all ${activeSubTab === 'qualidade-esb' ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-400'}`}>Qualidade eSB</button>
+          <button onClick={() => setActiveSubTab('populacao')} className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all ${activeSubTab === 'populacao' ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-400'}`}>População</button>
         </div>
       </header>
 
-      {/* ABA 1: POPULAÇÃO */}
+      {/* ABA: RANKING GERAL */}
+      {activeSubTab === 'ranking' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom">
+           <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-10 opacity-[0.03] text-9xl font-black pointer-events-none">🏆</div>
+              
+              <div className="text-center mb-12">
+                 <h3 className="text-3xl font-black text-emerald-900 uppercase tracking-tighter mb-2">Placar de Desempenho Global</h3>
+                 <p className="text-slate-400 text-xs font-black uppercase tracking-[0.3em]">Consolidado Q2/2025 (eSF + eSB)</p>
+              </div>
+
+              <div className="space-y-4">
+                 {sortedRanking.map((row, idx) => {
+                   const totalScore = (row.esfQ2Score || 0) + (row.dentalQ2Score || 0);
+                   const isTop3 = idx < 3;
+                   const medals = ['🥇', '🥈', '🥉'];
+                   
+                   return (
+                     <div key={idx} className={`flex items-center gap-4 p-6 rounded-[2rem] border transition-all ${isTop3 ? 'bg-emerald-50/50 border-emerald-100 shadow-md scale-[1.02]' : 'bg-slate-50 border-slate-100 opacity-80'}`}>
+                        <div className="w-12 h-12 flex items-center justify-center text-2xl bg-white rounded-2xl shadow-sm border border-slate-100 font-black text-emerald-900">
+                           {isTop3 ? medals[idx] : idx + 1}
+                        </div>
+                        
+                        <div className="flex-1">
+                           <h4 className="font-black text-slate-800 uppercase text-xs md:text-sm">{row.psfName}</h4>
+                           <div className="flex gap-4 mt-2">
+                              <div className="flex items-center gap-1.5">
+                                 <span className="text-[8px] font-black text-slate-400 uppercase">Saúde Família:</span>
+                                 <span className="text-[10px] font-black text-blue-600">{row.esfQ2Score?.toString().replace('.', ',')}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                 <span className="text-[8px] font-black text-slate-400 uppercase">Saúde Bucal:</span>
+                                 <span className="text-[10px] font-black text-emerald-600">{row.dentalQ2Score?.toString().replace('.', ',')}</span>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="text-right">
+                           <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1">Nota Global</p>
+                           <p className="text-2xl font-black text-emerald-900 tracking-tighter">{totalScore.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                     </div>
+                   );
+                 })}
+              </div>
+
+              <div className="mt-10 p-6 bg-blue-50 rounded-3xl border border-blue-100 flex items-center gap-4">
+                 <span className="text-2xl">💡</span>
+                 <p className="text-[10px] font-bold text-blue-800 uppercase leading-tight">
+                    O ranking é calculado somando as notas finais do segundo quadrimestre de 2025 de ambas as equipes (Saúde da Família e Bucal).
+                 </p>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* ABA: POPULAÇÃO */}
       {activeSubTab === 'populacao' && (
         <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl text-center animate-in slide-in-from-bottom">
           <h3 className="text-xl md:text-2xl font-black text-blue-800 uppercase tracking-tight mb-8">TOTAL DE PESSOAS VINCULADAS NO SIAPS</h3>
