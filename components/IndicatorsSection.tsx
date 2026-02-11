@@ -26,7 +26,10 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
 
   useEffect(() => {
     const unsub = databaseService.subscribePSFRankings((data) => {
-      if (data.length === 0) {
+      // FILTRO RIGOROSO: Só permite equipes que estejam na PSF_LIST
+      const filtered = data.filter(d => PSF_LIST.includes(d.psfName));
+      
+      if (filtered.length === 0) {
         setRankings(PSF_LIST.map(p => ({ 
           psfName: p, 
           eSusCount: 0, siapsCount: 0, 
@@ -35,7 +38,9 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
           lastUpdate: '' 
         })));
       } else {
-        setRankings(data);
+        // Ordenar conforme a lista padrão
+        const sorted = [...filtered].sort((a, b) => PSF_LIST.indexOf(a.psfName) - PSF_LIST.indexOf(b.psfName));
+        setRankings(sorted);
       }
     });
     return () => unsub();
@@ -48,7 +53,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
     }), { eSus: 0, siaps: 0 });
   }, [rankings]);
 
-  // Escala de cores conforme legenda oficial
+  // Escala de cores conforme imagem oficial
   const colorMap: Record<string, { text: string, bg: string }> = {
     'Ótimo': { text: 'text-blue-600', bg: 'bg-blue-600' },
     'Bom': { text: 'text-green-600', bg: 'bg-green-600' },
@@ -87,9 +92,9 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         <div className="text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Painel APS Mulungu 2025</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monitoramento APS Mulungu 2025</span>
           </div>
-          <h2 className="text-3xl font-black text-emerald-900 uppercase tracking-tighter leading-none">Resultados por Unidade</h2>
+          <h2 className="text-3xl font-black text-emerald-900 uppercase tracking-tighter leading-none">Resultados por Equipe</h2>
         </div>
         
         <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-auto overflow-x-auto no-scrollbar">
@@ -126,7 +131,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         </div>
       )}
 
-      {/* TABELA COMPARATIVA (QUALIDADE ESF E ESB) */}
+      {/* TABELAS DE QUALIDADE (eSF / eSB) */}
       {(activeSubTab === 'qualidade-esf' || activeSubTab === 'qualidade-esb') && (
         <div className="space-y-8 animate-in slide-in-from-bottom">
            <div className={`p-8 rounded-[3.5rem] border shadow-xl relative overflow-hidden ${activeSubTab === 'qualidade-esf' ? 'bg-blue-50/50 border-blue-100' : 'bg-emerald-50/50 border-emerald-100'}`}>
@@ -165,7 +170,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
 
                          return (
                            <tr key={idx} className="hover:bg-slate-50/30 transition-all group">
-                              <td className="px-6 py-8 font-black text-slate-800 text-[10px] uppercase border-r border-slate-100">
+                              <td className="px-6 py-8 font-black text-slate-800 text-[10px] uppercase border-r border-slate-100 leading-tight">
                                 {row.psfName}
                                 {isAdmin && <button onClick={() => { setEditingPSFData(row); setSelectedPSFForEdit(row.psfName); }} className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600">✏️</button>}
                               </td>
@@ -181,9 +186,9 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                   </table>
                 </div>
 
-                {/* Legenda Técnica de Classificação */}
+                {/* Legenda Oficial */}
                 <div className="w-full lg:w-56 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm shrink-0 flex flex-col justify-between">
-                   <h4 className="text-[10px] font-black text-blue-600 uppercase text-center mb-6 tracking-widest border-b pb-2">Nota e Classificação</h4>
+                   <h4 className="text-[10px] font-black text-blue-600 uppercase text-center mb-6 tracking-widest border-b pb-2 leading-none">Nota e Classificação</h4>
                    <div className="space-y-4">
                       <div className="flex flex-col">
                         <div className="w-full h-2 bg-red-600 rounded-t-lg"></div>
@@ -236,13 +241,17 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <p className="text-[9px] font-black text-blue-600 uppercase mb-2">Saúde da Família (eSF)</p>
-                  <input type="number" step="0.01" placeholder="Q1" className="w-full p-3 border-2 rounded-xl mb-2" value={editingPSFData.esfQ1Score} onChange={e => setEditingPSFData({...editingPSFData, esfQ1Score: parseFloat(e.target.value)})} />
-                  <input type="number" step="0.01" placeholder="Q2" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.esfQ2Score} onChange={e => setEditingPSFData({...editingPSFData, esfQ2Score: parseFloat(e.target.value)})} />
+                  <label className="text-[8px] font-black text-slate-400 uppercase">Q1</label>
+                  <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl mb-2" value={editingPSFData.esfQ1Score} onChange={e => setEditingPSFData({...editingPSFData, esfQ1Score: parseFloat(e.target.value)})} />
+                  <label className="text-[8px] font-black text-slate-400 uppercase">Q2</label>
+                  <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.esfQ2Score} onChange={e => setEditingPSFData({...editingPSFData, esfQ2Score: parseFloat(e.target.value)})} />
                 </div>
                 <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
                   <p className="text-[9px] font-black text-emerald-600 uppercase mb-2">Saúde Bucal (eSB)</p>
-                  <input type="number" step="0.01" placeholder="Q1" className="w-full p-3 border-2 rounded-xl mb-2" value={editingPSFData.dentalQ1Score} onChange={e => setEditingPSFData({...editingPSFData, dentalQ1Score: parseFloat(e.target.value)})} />
-                  <input type="number" step="0.01" placeholder="Q2" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.dentalQ2Score} onChange={e => setEditingPSFData({...editingPSFData, dentalQ2Score: parseFloat(e.target.value)})} />
+                  <label className="text-[8px] font-black text-slate-400 uppercase">Q1</label>
+                  <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl mb-2" value={editingPSFData.dentalQ1Score} onChange={e => setEditingPSFData({...editingPSFData, dentalQ1Score: parseFloat(e.target.value)})} />
+                  <label className="text-[8px] font-black text-slate-400 uppercase">Q2</label>
+                  <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.dentalQ2Score} onChange={e => setEditingPSFData({...editingPSFData, dentalQ2Score: parseFloat(e.target.value)})} />
                 </div>
               </div>
               <div className="flex flex-col gap-3 pt-4">

@@ -220,29 +220,16 @@ export const databaseService = {
     await deleteDoc(doc(db, "treasury_history", id)); 
   },
 
-  // Fix for Error in AdminDashboard.tsx: Added missing clearDatabase method to wipe the database
   clearDatabase: async (userId: string) => {
     if (userId !== 'admin-01') throw new Error("Acesso negado");
-    
     const batch = writeBatch(db);
-    
-    const collections = [
-      "members", 
-      "aps_indicators", 
-      "dental_indicators", 
-      "psf_rankings", 
-      "treasury_history",
-      "system_documents"
-    ];
-
+    const collections = ["members", "aps_indicators", "dental_indicators", "psf_rankings", "treasury_history", "system_documents"];
     for (const colName of collections) {
       const snap = await getDocs(collection(db, colName));
       snap.forEach(d => batch.delete(d.ref));
     }
-    
     batch.delete(doc(db, "treasury", "summary"));
     batch.delete(doc(db, "system", "stats"));
-
     await batch.commit();
   },
 
@@ -251,16 +238,16 @@ export const databaseService = {
     aps.forEach(item => batch.set(doc(db, "aps_indicators", item.code), item));
     dental.forEach(item => batch.set(doc(db, "dental_indicators", item.code), item));
     
-    // DADOS REAIS EXTRAÍDOS DAS IMAGENS (Saúde da Família e Saúde Bucal)
+    // DADOS REAIS ATUALIZADOS PARA AS 5 EQUIPES OFICIAIS
     const officialScores: Record<string, any> = {
       "USF ANTONIO ARNAULD DA SILVA": { 
         eSus: 3307, siaps: 2905,
-        esfQ1: 5.75, esfQ1C: 'Bom', esfQ2: 6, esfQ2C: 'Bom',
+        esfQ1: 5.75, esfQ1C: 'Bom', esfQ2: 6.0, esfQ2C: 'Bom',
         dQ1: 4.75, dQ1C: 'Suficiente', dQ2: 3.75, dQ2C: 'Suficiente'
       },
       "USF CAROLINA ROSA DE ASSIS": { 
         eSus: 4446, siaps: 3609,
-        esfQ1: 5.25, esfQ1C: 'Bom', esfQ2: 6, esfQ2C: 'Bom',
+        esfQ1: 5.25, esfQ1C: 'Bom', esfQ2: 6.0, esfQ2C: 'Bom',
         dQ1: 2.5, dQ1C: 'Regular', dQ2: 3.0, dQ2C: 'Suficiente'
       },
       "USF DE CANUDOS": { 
@@ -274,25 +261,25 @@ export const databaseService = {
         dQ1: 4.25, dQ1C: 'Suficiente', dQ2: 3.25, dQ2C: 'Suficiente'
       },
       "USF NOEME TELES BOAVENTURA": { 
-        eSus: 2192, siaps: 1868,
+        eSus: 0, siaps: 0, // Dados populacionais não fornecidos para Noeme
         esfQ1: 6.25, esfQ1C: 'Bom', esfQ2: 7.25, esfQ2C: 'Bom',
         dQ1: 2.5, dQ1C: 'Regular', dQ2: 2.5, dQ2C: 'Regular'
       }
     };
 
     PSF_LIST.forEach(psf => {
-      const data = officialScores[psf] || { esfQ1: 0, esfQ2: 0, dQ1: 0, dQ2: 0 };
+      const data = officialScores[psf] || { esfQ1: 0, esfQ2: 0, dQ1: 0, dQ2: 0, eSus: 0, siaps: 0 };
       batch.set(doc(db, "psf_rankings", psf.replace(/\s+/g, '_')), {
         psfName: psf,
         eSusCount: data.eSus || 0,
         siapsCount: data.siaps || 0,
-        esfQ1Score: data.esfQ1,
+        esfQ1Score: data.esfQ1 || 0,
         esfQ1Class: data.esfQ1C || 'Regular',
-        esfQ2Score: data.esfQ2,
+        esfQ2Score: data.esfQ2 || 0,
         esfQ2Class: data.esfQ2C || 'Regular',
-        dentalQ1Score: data.dQ1,
+        dentalQ1Score: data.dQ1 || 0,
         dentalQ1Class: data.dQ1C || 'Regular',
-        dentalQ2Score: data.dQ2,
+        dentalQ2Score: data.dQ2 || 0,
         dentalQ2Class: data.dQ2C || 'Regular',
         lastUpdate: new Date().toISOString()
       });

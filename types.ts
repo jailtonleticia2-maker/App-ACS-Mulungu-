@@ -9,8 +9,7 @@ export const PSF_LIST = [
   "USF CAROLINA ROSA DE ASSIS",
   "USF DE CANUDOS",
   "USF DE VARZEA DO CERCO",
-  "USF NOEME TELES BOAVENTURA",
-  "PSF ALAGADIÇO"
+  "USF NOEME TELES BOAVENTURA"
 ];
 
 export interface Member {
