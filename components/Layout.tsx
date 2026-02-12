@@ -18,11 +18,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
   const menuItems = [
     { id: 'dashboard', label: 'Início', icon: '🏠' },
     { id: 'indicators', label: 'Indicadores', icon: '📊' },
+    { id: 'courses', label: 'Cursos', icon: '🎓' },
     { id: 'treasury', label: 'Tesouraria', icon: '⚖️' },
-    { id: 'association-docs', label: 'Documentos', icon: '📂' }, // Nova aba adicionada
-    { id: 'profile', label: 'Minha Carteirinha', icon: '🪪' },
-    { id: 'news', label: 'Notícias MS', icon: '📜' },
-    { id: 'members', label: 'Gestão', icon: '⚙️', restricted: true },
+    { id: 'association-docs', label: 'Documentos', icon: '📂' },
+    { id: 'profile', label: 'Carteirinha', icon: '🪪' },
+    { id: 'news', label: 'Notícias MS', icon: '📰' },
+    { id: 'members', label: 'Gestão', icon: '⚙️' }, // Removido 'restricted: true' para estar sempre visível
   ];
 
   return (
@@ -40,28 +41,28 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
         {/* Menu Desktop */}
         <nav className="mt-6 px-4 space-y-1 hidden md:block">
           {menuItems.map((item) => (
-            (!item.restricted || (userRole === UserRole.ADMIN)) && (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === item.id ? 'bg-emerald-800 text-white shadow-inner border-l-4 border-emerald-400' : 'hover:bg-emerald-800/50 text-emerald-100'
-                } ${item.restricted ? 'mt-8 border-t border-emerald-800/50 pt-4 opacity-70 hover:opacity-100' : ''}`}
-              >
-                <span className="text-xl">{item.icon}</span>
-                <span className="font-medium">{item.label}</span>
-              </button>
-            )
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === item.id 
+                  ? 'bg-emerald-800 text-white shadow-inner border-l-4 border-emerald-400' 
+                  : 'hover:bg-emerald-800/50 text-emerald-100'
+              } ${item.id === 'members' ? 'mt-8 border-t border-emerald-800/50 pt-4 opacity-80 hover:opacity-100' : ''}`}
+            >
+              <span className="text-xl">{item.icon}</span>
+              <span className="font-medium">{item.label}</span>
+            </button>
           ))}
         </nav>
 
         {/* Menu Inferior Estilo App (Mobile) */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-emerald-900 border-t border-emerald-800 flex justify-around items-center p-2 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.2)]">
-          {menuItems.filter(i => !i.restricted).map((item) => (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-emerald-900 border-t border-emerald-800 flex justify-around items-center p-2 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.2)] overflow-x-auto no-scrollbar">
+          {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all ${
+              className={`flex flex-col items-center p-2 min-w-[60px] rounded-xl transition-all ${
                 activeTab === item.id ? 'text-white scale-110' : 'text-emerald-400 opacity-60'
               }`}
             >
@@ -69,17 +70,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
               <span className="text-[8px] font-black uppercase tracking-widest">{item.label.split(' ')[0]}</span>
             </button>
           ))}
-          {userRole === UserRole.ADMIN && (
-            <button
-              onClick={() => setActiveTab('members')}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all ${
-                activeTab === 'members' ? 'text-white scale-110' : 'text-emerald-400 opacity-60'
-              }`}
-            >
-              <span className="text-xl mb-0.5">⚙️</span>
-              <span className="text-[8px] font-black uppercase tracking-widest">Admin</span>
-            </button>
-          )}
         </div>
 
         <div className="mt-auto p-4 border-t border-emerald-800/50 hidden md:block">
