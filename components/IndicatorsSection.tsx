@@ -53,7 +53,6 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
     });
   }, [rankings]);
 
-  // Escala de cores baseada na imagem: Red, Yellow, Green, Blue
   const colorMap: Record<string, { text: string, bg: string }> = {
     'Ótimo': { text: 'text-blue-600', bg: 'bg-blue-600' },
     'Bom': { text: 'text-emerald-600', bg: 'bg-emerald-600' },
@@ -85,7 +84,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
     await databaseService.updatePSFRanking(editingPSFData.psfName, finalData);
     setSelectedPSFForEdit(null);
     setEditingPSFData(null);
-    alert("Dados atualizados!");
+    alert("Dados atualizados com sucesso!");
   };
 
   return (
@@ -108,7 +107,6 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         </div>
       </header>
 
-      {/* ABA: VÍNCULO E ACOMPANHAMENTO TERRITORIAL */}
       {activeSubTab === 'vinculo-territorial' && (
         <div className="space-y-8 animate-in slide-in-from-bottom">
            <div className="bg-white p-6 md:p-10 rounded-[3.5rem] border border-slate-100 shadow-xl relative overflow-hidden">
@@ -161,7 +159,6 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                     </tbody>
                   </table>
                 </div>
-                {/* Legenda Lateral */}
                 <div className="w-full lg:w-64 shrink-0">
                   <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
                     <h4 className="text-[11px] font-black text-blue-800 uppercase text-center mb-6 tracking-widest border-b pb-2">Legenda</h4>
@@ -181,7 +178,6 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         </div>
       )}
 
-      {/* ABAS: QUALIDADE eSF / QUALIDADE eSB (RESTAURADAS) */}
       {(activeSubTab === 'qualidade-esf' || activeSubTab === 'qualidade-esb') && (
         <div className="space-y-8 animate-in slide-in-from-bottom">
            <div className={`bg-white p-6 md:p-10 rounded-[3.5rem] border border-slate-100 shadow-xl relative overflow-hidden`}>
@@ -232,7 +228,6 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         </div>
       )}
 
-      {/* ABA: RANKING GERAL */}
       {activeSubTab === 'ranking' && (
         <div className="space-y-8 animate-in slide-in-from-bottom">
            <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl relative overflow-hidden">
@@ -269,7 +264,6 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         </div>
       )}
 
-      {/* ABA: POPULAÇÃO */}
       {activeSubTab === 'populacao' && (
         <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl text-center animate-in slide-in-from-bottom">
           <h3 className="text-xl md:text-2xl font-black text-blue-800 uppercase tracking-tight mb-8">TOTAL DE PESSOAS VINCULADAS NO SIAPS</h3>
@@ -296,31 +290,64 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         </div>
       )}
 
-      {/* MODAL EDIÇÃO */}
       {selectedPSFForEdit && editingPSFData && (
         <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-[300] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3.5rem] p-10 w-full max-w-xl shadow-2xl animate-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-black text-blue-900 uppercase tracking-tighter mb-8 text-center">{selectedPSFForEdit}</h3>
+          <div className="bg-white rounded-[3.5rem] p-8 md:p-10 w-full max-w-2xl shadow-2xl animate-in zoom-in duration-300 max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-blue-900 uppercase tracking-tighter">{selectedPSFForEdit}</h3>
+              <button onClick={() => setSelectedPSFForEdit(null)} className="text-slate-300 text-2xl">✕</button>
+            </div>
+            
             <form onSubmit={handleSavePSFData} className="space-y-6">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="text-[9px] font-black text-blue-600 uppercase mb-4">Notas do Q2/25</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-[8px] font-black text-slate-400 uppercase">Qualidade eSF</label>
-                    <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl mb-2" value={editingPSFData.esfQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, esfQ2Score: parseFloat(e.target.value)})} />
+              <div className="space-y-6">
+                {/* SEÇÃO QUALIDADE eSF */}
+                <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100">
+                  <p className="text-[10px] font-black text-blue-800 uppercase mb-4 tracking-widest">Componente de Qualidade (eSF)</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q1/25</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.esfQ1Score || 0} onChange={e => setEditingPSFData({...editingPSFData, esfQ1Score: parseFloat(e.target.value)})} />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q2/25</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.esfQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, esfQ2Score: parseFloat(e.target.value)})} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[8px] font-black text-slate-400 uppercase">Qualidade eSB</label>
-                    <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl mb-2" value={editingPSFData.dentalQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, dentalQ2Score: parseFloat(e.target.value)})} />
+                </div>
+
+                {/* SEÇÃO QUALIDADE eSB */}
+                <div className="p-5 bg-emerald-50/50 rounded-3xl border border-emerald-100">
+                  <p className="text-[10px] font-black text-emerald-800 uppercase mb-4 tracking-widest">Componente de Qualidade (eSB)</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q1/25</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.dentalQ1Score || 0} onChange={e => setEditingPSFData({...editingPSFData, dentalQ1Score: parseFloat(e.target.value)})} />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q2/25</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.dentalQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, dentalQ2Score: parseFloat(e.target.value)})} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[8px] font-black text-slate-400 uppercase">Territorial</label>
-                    <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.territorialQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, territorialQ2Score: parseFloat(e.target.value)})} />
+                </div>
+
+                {/* SEÇÃO VÍNCULO TERRITORIAL */}
+                <div className="p-5 bg-indigo-50/50 rounded-3xl border border-indigo-100">
+                  <p className="text-[10px] font-black text-indigo-800 uppercase mb-4 tracking-widest">Vínculo Territorial</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q1/25</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.territorialQ1Score || 0} onChange={e => setEditingPSFData({...editingPSFData, territorialQ1Score: parseFloat(e.target.value)})} />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q2/25</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.territorialQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, territorialQ2Score: parseFloat(e.target.value)})} />
+                    </div>
                   </div>
                 </div>
               </div>
+
               <div className="flex flex-col gap-3 pt-4">
-                <button type="submit" className="w-full bg-blue-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] shadow-xl">Salvar Notas</button>
+                <button type="submit" className="w-full bg-emerald-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] shadow-xl hover:bg-black transition-all">Salvar Todos os Dados</button>
                 <button type="button" onClick={() => setSelectedPSFForEdit(null)} className="w-full text-slate-400 font-bold uppercase text-[9px] py-2">Cancelar</button>
               </div>
             </form>
