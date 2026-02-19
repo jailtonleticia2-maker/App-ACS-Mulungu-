@@ -12,6 +12,12 @@ export const PSF_LIST = [
   "USF NOEME TELES BOAVENTURA"
 ];
 
+export interface SystemConfig {
+  q1Label: string;
+  q2Label: string;
+  q3Label: string;
+}
+
 export interface Member {
   id: string;
   fullName: string;
@@ -49,16 +55,27 @@ export interface PSFRankingData {
   indicators?: APSIndicator[]; 
   eSusCount: number;          
   siapsCount: number;         
-  // Saúde da Família (eSF) - Componente de Qualidade
+  // Saúde da Família (eSF)
   esfQ1Score: number;
   esfQ1Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
   esfQ2Score: number;
   esfQ2Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
-  // Saúde Bucal (eSB) - Componente de Qualidade
+  esfQ3Score: number;
+  esfQ3Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+  // Saúde Bucal (eSB)
   dentalQ1Score: number;
   dentalQ1Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
   dentalQ2Score: number;
   dentalQ2Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+  dentalQ3Score: number;
+  dentalQ3Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+  // Vínculo e Acompanhamento Territorial
+  territorialQ1Score: number;
+  territorialQ1Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+  territorialQ2Score: number;
+  territorialQ2Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
+  territorialQ3Score: number;
+  territorialQ3Class: 'Ótimo' | 'Bom' | 'Suficiente' | 'Regular';
   lastUpdate: string;
 }
 

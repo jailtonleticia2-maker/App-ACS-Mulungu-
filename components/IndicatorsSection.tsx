@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { APSIndicator, DentalIndicator, PSFRankingData, PSF_LIST } from '../types';
+import { APSIndicator, DentalIndicator, PSFRankingData, PSF_LIST, SystemConfig } from '../types';
 import { databaseService } from '../services/databaseService';
 
 interface IndicatorsSectionProps {
@@ -19,22 +19,21 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
   isAdmin 
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'ranking' | 'vinculo-territorial' | 'qualidade-esf' | 'qualidade-esb' | 'populacao'>('vinculo-territorial');
-  
   const [rankings, setRankings] = useState<PSFRankingData[]>([]);
+  const [config, setConfig] = useState<SystemConfig>({ q1Label: 'Q1/25', q2Label: 'Q2/25', q3Label: 'Q3/25' });
   const [selectedPSFForEdit, setSelectedPSFForEdit] = useState<string | null>(null);
   const [editingPSFData, setEditingPSFData] = useState<PSFRankingData | null>(null);
 
   useEffect(() => {
-    const unsub = databaseService.subscribePSFRankings((data) => {
+    const unsubConfig = databaseService.subscribeSystemConfig(setConfig);
+    const unsubRankings = databaseService.subscribePSFRankings((data) => {
       const filtered = data.filter(d => PSF_LIST.includes(d.psfName));
-      
       if (filtered.length === 0) {
         setRankings(PSF_LIST.map(p => ({ 
-          psfName: p, 
-          eSusCount: 0, siapsCount: 0, 
-          esfQ1Score: 0, esfQ1Class: 'Regular', esfQ2Score: 0, esfQ2Class: 'Regular',
-          dentalQ1Score: 0, dentalQ1Class: 'Regular', dentalQ2Score: 0, dentalQ2Class: 'Regular',
-          territorialQ1Score: 0, territorialQ1Class: 'Regular', territorialQ2Score: 0, territorialQ2Class: 'Regular',
+          psfName: p, eSusCount: 0, siapsCount: 0, 
+          esfQ1Score: 0, esfQ1Class: 'Regular', esfQ2Score: 0, esfQ2Class: 'Regular', esfQ3Score: 0, esfQ3Class: 'Regular',
+          dentalQ1Score: 0, dentalQ1Class: 'Regular', dentalQ2Score: 0, dentalQ2Class: 'Regular', dentalQ3Score: 0, dentalQ3Class: 'Regular',
+          territorialQ1Score: 0, territorialQ1Class: 'Regular', territorialQ2Score: 0, territorialQ2Class: 'Regular', territorialQ3Score: 0, territorialQ3Class: 'Regular',
           lastUpdate: '' 
         })));
       } else {
@@ -42,13 +41,13 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         setRankings(sorted);
       }
     });
-    return () => unsub();
+    return () => { unsubConfig(); unsubRankings(); };
   }, []);
 
   const sortedRanking = useMemo(() => {
     return [...rankings].sort((a, b) => {
-      const scoreA = (a.esfQ2Score || 0) + (a.dentalQ2Score || 0) + (a.territorialQ2Score || 0);
-      const scoreB = (b.esfQ2Score || 0) + (b.dentalQ2Score || 0) + (b.territorialQ2Score || 0);
+      const scoreA = (a.esfQ3Score || a.esfQ2Score || 0) + (a.dentalQ3Score || a.dentalQ2Score || 0) + (a.territorialQ3Score || a.territorialQ2Score || 0);
+      const scoreB = (b.esfQ3Score || b.esfQ2Score || 0) + (b.dentalQ3Score || b.dentalQ2Score || 0) + (b.territorialQ3Score || b.territorialQ2Score || 0);
       return scoreB - scoreA;
     });
   }, [rankings]);
@@ -70,17 +69,18 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
   const handleSavePSFData = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPSFData) return;
-    
     const finalData = {
       ...editingPSFData,
       esfQ1Class: getClass(editingPSFData.esfQ1Score || 0),
       esfQ2Class: getClass(editingPSFData.esfQ2Score || 0),
+      esfQ3Class: getClass(editingPSFData.esfQ3Score || 0),
       dentalQ1Class: getClass(editingPSFData.dentalQ1Score || 0),
       dentalQ2Class: getClass(editingPSFData.dentalQ2Score || 0),
+      dentalQ3Class: getClass(editingPSFData.dentalQ3Score || 0),
       territorialQ1Class: getClass(editingPSFData.territorialQ1Score || 0),
-      territorialQ2Class: getClass(editingPSFData.territorialQ2Score || 0)
+      territorialQ2Class: getClass(editingPSFData.territorialQ2Score || 0),
+      territorialQ3Class: getClass(editingPSFData.territorialQ3Score || 0)
     };
-
     await databaseService.updatePSFRanking(editingPSFData.psfName, finalData);
     setSelectedPSFForEdit(null);
     setEditingPSFData(null);
@@ -93,7 +93,7 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
         <div className="text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monitoramento APS 2025</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monitoramento Profissional</span>
           </div>
           <h2 className="text-3xl font-black text-emerald-900 uppercase tracking-tighter leading-none">Resultados por Equipe</h2>
         </div>
@@ -123,39 +123,34 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                     <thead>
                        <tr className="bg-slate-50/50">
                           <th rowSpan={2} className="px-6 py-10 text-center border-r border-slate-100 text-blue-800 font-black text-lg uppercase tracking-tighter min-w-[200px]">Equipe</th>
-                          <th colSpan={2} className="px-4 py-4 text-center text-blue-800 font-black text-xl border-b border-r border-slate-100 uppercase tracking-tighter">Q1/25</th>
-                          <th rowSpan={2} className="px-4 py-4 text-center text-blue-800 font-black text-[9px] uppercase border-r border-slate-100 leading-tight">Comparação<br/>entre<br/>quadrimestres</th>
-                          <th colSpan={2} className="px-4 py-4 text-center text-blue-800 font-black text-xl border-b border-slate-100 uppercase tracking-tighter">Q2/25</th>
+                          <th colSpan={2} className="px-4 py-4 text-center text-blue-800 font-black text-xl border-b border-r border-slate-100 uppercase tracking-tighter">{config.q1Label}</th>
+                          <th colSpan={2} className="px-4 py-4 text-center text-blue-800 font-black text-xl border-b border-r border-slate-100 uppercase tracking-tighter">{config.q2Label}</th>
+                          <th colSpan={2} className="px-4 py-4 text-center text-blue-800 font-black text-xl border-b border-slate-100 uppercase tracking-tighter">{config.q3Label}</th>
                        </tr>
                        <tr className="bg-slate-50/80 text-[10px] font-black text-blue-800 uppercase tracking-widest text-center border-b border-slate-100">
-                          <th className="px-4 py-6 border-r border-slate-100">Nota final</th>
-                          <th className="px-4 py-6 border-r border-slate-100">Classificação Final</th>
-                          <th className="px-4 py-6 border-r border-slate-100">Nota final</th>
-                          <th className="px-4 py-6">Classificação Final</th>
+                          <th className="px-4 py-6 border-r border-slate-100">Nota</th>
+                          <th className="px-4 py-6 border-r border-slate-100">Classe</th>
+                          <th className="px-4 py-6 border-r border-slate-100">Nota</th>
+                          <th className="px-4 py-6 border-r border-slate-100">Classe</th>
+                          <th className="px-4 py-6 border-r border-slate-100">Nota</th>
+                          <th className="px-4 py-6">Classe</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                       {rankings.map((row, idx) => {
-                         const q1S = row.territorialQ1Score ?? 0;
-                         const q2S = row.territorialQ2Score ?? 0;
-                         const q1C = row.territorialQ1Class ?? 'Regular';
-                         const q2C = row.territorialQ2Class ?? 'Regular';
-                         return (
+                       {rankings.map((row, idx) => (
                            <tr key={idx} className="hover:bg-slate-50/30 transition-all group">
                               <td className="px-6 py-8 font-black text-slate-800 text-[11px] uppercase border-r border-slate-100 leading-tight">
                                 {row.psfName}
                                 {isAdmin && <button onClick={() => { setEditingPSFData(row); setSelectedPSFForEdit(row.psfName); }} className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600">✏️</button>}
                               </td>
-                              <td className="px-4 py-8 text-center font-black text-slate-800 text-xl border-r border-slate-100">{q1S.toString().replace('.', ',')}</td>
-                              <td className={`px-4 py-8 text-center font-black text-[12px] uppercase tracking-tighter border-r border-slate-100 ${colorMap[q1C]?.text || 'text-slate-400'}`}>{q1C.toUpperCase()}</td>
-                              <td className="px-4 py-8 text-center font-black border-r border-slate-100">
-                                <div className="w-6 h-6 bg-slate-900 text-white rounded flex items-center justify-center mx-auto text-[10px]">✓</div>
-                              </td>
-                              <td className="px-4 py-8 text-center font-black text-slate-800 text-xl border-r border-slate-100">{q2S.toString().replace('.', ',')}</td>
-                              <td className={`px-4 py-8 text-center font-black text-[12px] uppercase tracking-tighter ${colorMap[q2C]?.text || 'text-slate-400'}`}>{q2C.toUpperCase()}</td>
+                              <td className="px-4 py-8 text-center font-black text-slate-800 text-xl border-r border-slate-100">{(row.territorialQ1Score ?? 0).toString().replace('.', ',')}</td>
+                              <td className={`px-4 py-8 text-center font-black text-[10px] uppercase border-r border-slate-100 ${colorMap[row.territorialQ1Class || 'Regular']?.text}`}>{row.territorialQ1Class}</td>
+                              <td className="px-4 py-8 text-center font-black text-slate-800 text-xl border-r border-slate-100">{(row.territorialQ2Score ?? 0).toString().replace('.', ',')}</td>
+                              <td className={`px-4 py-8 text-center font-black text-[10px] uppercase border-r border-slate-100 ${colorMap[row.territorialQ2Class || 'Regular']?.text}`}>{row.territorialQ2Class}</td>
+                              <td className="px-4 py-8 text-center font-black text-slate-800 text-xl border-r border-slate-100">{(row.territorialQ3Score ?? 0).toString().replace('.', ',')}</td>
+                              <td className={`px-4 py-8 text-center font-black text-[10px] uppercase ${colorMap[row.territorialQ3Class || 'Regular']?.text}`}>{row.territorialQ3Class}</td>
                            </tr>
-                         );
-                       })}
+                       ))}
                     </tbody>
                   </table>
                 </div>
@@ -191,33 +186,39 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                   <thead>
                      <tr className="bg-slate-50/50">
                         <th rowSpan={2} className="px-6 py-10 text-center border-r border-slate-100 text-slate-800 font-black text-lg uppercase tracking-tighter min-w-[200px]">Equipe</th>
-                        <th colSpan={2} className="px-4 py-4 text-center text-slate-800 font-black text-xl border-b border-r border-slate-100 uppercase tracking-tighter">Q1/25</th>
-                        <th rowSpan={2} className="px-4 py-4 text-center text-slate-800 font-black text-[9px] uppercase border-r border-slate-100 leading-tight">Tendência</th>
-                        <th colSpan={2} className="px-4 py-4 text-center text-slate-800 font-black text-xl border-b border-slate-100 uppercase tracking-tighter">Q2/25</th>
+                        <th colSpan={2} className="px-4 py-4 text-center text-slate-800 font-black text-xl border-b border-r border-slate-100 uppercase tracking-tighter">{config.q1Label}</th>
+                        <th colSpan={2} className="px-4 py-4 text-center text-slate-800 font-black text-xl border-b border-r border-slate-100 uppercase tracking-tighter">{config.q2Label}</th>
+                        <th colSpan={2} className="px-4 py-4 text-center text-slate-800 font-black text-xl border-b border-slate-100 uppercase tracking-tighter">{config.q3Label}</th>
                      </tr>
                      <tr className="bg-slate-50/80 text-[10px] font-black text-slate-800 uppercase tracking-widest text-center border-b border-slate-100">
-                        <th className="px-4 py-6 border-r border-slate-100">Nota final</th>
-                        <th className="px-4 py-6 border-r border-slate-100">Classificação</th>
-                        <th className="px-4 py-6 border-r border-slate-100">Nota final</th>
-                        <th className="px-4 py-6">Classificação</th>
+                        <th className="px-4 py-6 border-r border-slate-100">Nota</th>
+                        <th className="px-4 py-6 border-r border-slate-100">Classe</th>
+                        <th className="px-4 py-6 border-r border-slate-100">Nota</th>
+                        <th className="px-4 py-6 border-r border-slate-100">Classe</th>
+                        <th className="px-4 py-6 border-r border-slate-100">Nota</th>
+                        <th className="px-4 py-6">Classe</th>
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {rankings.map((row, idx) => {
                       const q1S = activeSubTab === 'qualidade-esf' ? (row.esfQ1Score ?? 0) : (row.dentalQ1Score ?? 0);
                       const q2S = activeSubTab === 'qualidade-esf' ? (row.esfQ2Score ?? 0) : (row.dentalQ2Score ?? 0);
+                      const q3S = activeSubTab === 'qualidade-esf' ? (row.esfQ3Score ?? 0) : (row.dentalQ3Score ?? 0);
                       const q1C = activeSubTab === 'qualidade-esf' ? (row.esfQ1Class ?? 'Regular') : (row.dentalQ1Class ?? 'Regular');
                       const q2C = activeSubTab === 'qualidade-esf' ? (row.esfQ2Class ?? 'Regular') : (row.dentalQ2Class ?? 'Regular');
-                      const trend = q2S > q1S ? '↑' : q2S < q1S ? '↓' : '•';
-                      const trendColor = trend === '↑' ? 'text-emerald-500' : trend === '↓' ? 'text-rose-500' : 'text-slate-300';
+                      const q3C = activeSubTab === 'qualidade-esf' ? (row.esfQ3Class ?? 'Regular') : (row.dentalQ3Class ?? 'Regular');
                       return (
                         <tr key={idx} className="hover:bg-slate-50/30 transition-all group">
-                          <td className="px-6 py-8 font-black text-slate-800 text-[11px] uppercase border-r border-slate-100">{row.psfName}</td>
+                          <td className="px-6 py-8 font-black text-slate-800 text-[11px] uppercase border-r border-slate-100">
+                            {row.psfName}
+                            {isAdmin && <button onClick={() => { setEditingPSFData(row); setSelectedPSFForEdit(row.psfName); }} className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-600">✏️</button>}
+                          </td>
                           <td className="px-4 py-8 text-center font-black text-slate-800 text-xl border-r border-slate-100">{q1S.toString().replace('.', ',')}</td>
-                          <td className={`px-4 py-8 text-center font-black text-[12px] uppercase border-r border-slate-100 ${colorMap[q1C]?.text || 'text-slate-400'}`}>{q1C.toUpperCase()}</td>
-                          <td className={`px-4 py-8 text-center font-black text-3xl border-r border-slate-100 ${trendColor}`}>{trend}</td>
+                          <td className={`px-4 py-8 text-center font-black text-[10px] uppercase border-r border-slate-100 ${colorMap[q1C]?.text}`}>{q1C}</td>
                           <td className="px-4 py-8 text-center font-black text-slate-800 text-xl border-r border-slate-100">{q2S.toString().replace('.', ',')}</td>
-                          <td className={`px-4 py-8 text-center font-black text-[12px] uppercase ${colorMap[q2C]?.text || 'text-slate-400'}`}>{q2C.toUpperCase()}</td>
+                          <td className={`px-4 py-8 text-center font-black text-[10px] uppercase border-r border-slate-100 ${colorMap[q2C]?.text}`}>{q2C}</td>
+                          <td className="px-4 py-8 text-center font-black text-slate-800 text-xl border-r border-slate-100">{q3S.toString().replace('.', ',')}</td>
+                          <td className={`px-4 py-8 text-center font-black text-[10px] uppercase ${colorMap[q3C]?.text}`}>{q3C}</td>
                         </tr>
                       );
                     })}
@@ -234,11 +235,11 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
               <div className="absolute top-0 right-0 p-10 opacity-[0.03] text-9xl font-black pointer-events-none">🏆</div>
               <div className="text-center mb-12">
                  <h3 className="text-3xl font-black text-emerald-900 uppercase tracking-tighter mb-2">Placar Global</h3>
-                 <p className="text-slate-400 text-xs font-black uppercase tracking-[0.3em]">Consolidado Q2/2025 (Soma de todos os componentes)</p>
+                 <p className="text-slate-400 text-xs font-black uppercase tracking-[0.3em]">Consolidado {config.q3Label} (Melhor Score)</p>
               </div>
               <div className="space-y-4">
                  {sortedRanking.map((row, idx) => {
-                   const totalScore = (row.esfQ2Score || 0) + (row.dentalQ2Score || 0) + (row.territorialQ2Score || 0);
+                   const totalScore = (row.esfQ3Score || row.esfQ2Score || 0) + (row.dentalQ3Score || row.dentalQ2Score || 0) + (row.territorialQ3Score || row.territorialQ2Score || 0);
                    const isTop3 = idx < 3;
                    const medals = ['🥇', '🥈', '🥉'];
                    return (
@@ -247,9 +248,9 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
                         <div className="flex-1">
                            <h4 className="font-black text-slate-800 uppercase text-xs md:text-sm">{row.psfName}</h4>
                            <div className="flex gap-4 mt-2">
-                              <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-slate-400 uppercase">SF:</span><span className="text-[10px] font-black text-blue-600">{(row.esfQ2Score || 0).toString().replace('.', ',')}</span></div>
-                              <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-slate-400 uppercase">Territorial:</span><span className="text-[10px] font-black text-blue-600">{(row.territorialQ2Score || 0).toString().replace('.', ',')}</span></div>
-                              <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-slate-400 uppercase">Bucal:</span><span className="text-[10px] font-black text-emerald-600">{(row.dentalQ2Score || 0).toString().replace('.', ',')}</span></div>
+                              <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-slate-400 uppercase">SF:</span><span className="text-[10px] font-black text-blue-600">{(row.esfQ3Score || row.esfQ2Score || 0).toString().replace('.', ',')}</span></div>
+                              <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-slate-400 uppercase">Territorial:</span><span className="text-[10px] font-black text-blue-600">{(row.territorialQ3Score || row.territorialQ2Score || 0).toString().replace('.', ',')}</span></div>
+                              <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-slate-400 uppercase">Bucal:</span><span className="text-[10px] font-black text-emerald-600">{(row.dentalQ3Score || row.dentalQ2Score || 0).toString().replace('.', ',')}</span></div>
                            </div>
                         </div>
                         <div className="text-right">
@@ -272,8 +273,8 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
               <thead className="border-b-2 border-slate-100">
                 <tr className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
                   <th className="px-6 py-6">Estabelecimento</th>
-                  <th className="px-6 py-6 text-center text-blue-600">e-SUS 01-2026</th>
-                  <th className="px-6 py-6 text-center text-emerald-600">SIAPS 11-2025</th>
+                  <th className="px-6 py-6 text-center text-blue-600">e-SUS Atual</th>
+                  <th className="px-6 py-6 text-center text-emerald-600">SIAPS Consolidado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -300,54 +301,62 @@ const IndicatorsSection: React.FC<IndicatorsSectionProps> = ({
             
             <form onSubmit={handleSavePSFData} className="space-y-6">
               <div className="space-y-6">
-                {/* SEÇÃO QUALIDADE eSF */}
                 <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100">
                   <p className="text-[10px] font-black text-blue-800 uppercase mb-4 tracking-widest">Componente de Qualidade (eSF)</p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q1/25</label>
+                      <label className="text-[8px] font-black text-slate-400 uppercase">{config.q1Label}</label>
                       <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.esfQ1Score || 0} onChange={e => setEditingPSFData({...editingPSFData, esfQ1Score: parseFloat(e.target.value)})} />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q2/25</label>
+                      <label className="text-[8px] font-black text-slate-400 uppercase">{config.q2Label}</label>
                       <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.esfQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, esfQ2Score: parseFloat(e.target.value)})} />
+                    </div>
+                    <div className="bg-blue-100/50 p-2 rounded-xl">
+                      <label className="text-[8px] font-black text-blue-600 uppercase">{config.q3Label}</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 border-blue-200 rounded-xl font-black" value={editingPSFData.esfQ3Score || 0} onChange={e => setEditingPSFData({...editingPSFData, esfQ3Score: parseFloat(e.target.value)})} />
                     </div>
                   </div>
                 </div>
 
-                {/* SEÇÃO QUALIDADE eSB */}
                 <div className="p-5 bg-emerald-50/50 rounded-3xl border border-emerald-100">
                   <p className="text-[10px] font-black text-emerald-800 uppercase mb-4 tracking-widest">Componente de Qualidade (eSB)</p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q1/25</label>
+                      <label className="text-[8px] font-black text-slate-400 uppercase">{config.q1Label}</label>
                       <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.dentalQ1Score || 0} onChange={e => setEditingPSFData({...editingPSFData, dentalQ1Score: parseFloat(e.target.value)})} />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q2/25</label>
+                      <label className="text-[8px] font-black text-slate-400 uppercase">{config.q2Label}</label>
                       <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.dentalQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, dentalQ2Score: parseFloat(e.target.value)})} />
+                    </div>
+                    <div className="bg-emerald-100/50 p-2 rounded-xl">
+                      <label className="text-[8px] font-black text-emerald-600 uppercase">{config.q3Label}</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 border-emerald-200 rounded-xl font-black" value={editingPSFData.dentalQ3Score || 0} onChange={e => setEditingPSFData({...editingPSFData, dentalQ3Score: parseFloat(e.target.value)})} />
                     </div>
                   </div>
                 </div>
 
-                {/* SEÇÃO VÍNCULO TERRITORIAL */}
                 <div className="p-5 bg-indigo-50/50 rounded-3xl border border-indigo-100">
                   <p className="text-[10px] font-black text-indigo-800 uppercase mb-4 tracking-widest">Vínculo Territorial</p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q1/25</label>
+                      <label className="text-[8px] font-black text-slate-400 uppercase">{config.q1Label}</label>
                       <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.territorialQ1Score || 0} onChange={e => setEditingPSFData({...editingPSFData, territorialQ1Score: parseFloat(e.target.value)})} />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Nota Q2/25</label>
+                      <label className="text-[8px] font-black text-slate-400 uppercase">{config.q2Label}</label>
                       <input type="number" step="0.01" className="w-full p-3 border-2 rounded-xl" value={editingPSFData.territorialQ2Score || 0} onChange={e => setEditingPSFData({...editingPSFData, territorialQ2Score: parseFloat(e.target.value)})} />
+                    </div>
+                    <div className="bg-indigo-100/50 p-2 rounded-xl">
+                      <label className="text-[8px] font-black text-indigo-600 uppercase">{config.q3Label}</label>
+                      <input type="number" step="0.01" className="w-full p-3 border-2 border-indigo-200 rounded-xl font-black" value={editingPSFData.territorialQ3Score || 0} onChange={e => setEditingPSFData({...editingPSFData, territorialQ3Score: parseFloat(e.target.value)})} />
                     </div>
                   </div>
                 </div>
               </div>
-
               <div className="flex flex-col gap-3 pt-4">
-                <button type="submit" className="w-full bg-emerald-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] shadow-xl hover:bg-black transition-all">Salvar Todos os Dados</button>
+                <button type="submit" className="w-full bg-emerald-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] shadow-xl hover:bg-black transition-all">Salvar Dados do PSF</button>
                 <button type="button" onClick={() => setSelectedPSFForEdit(null)} className="w-full text-slate-400 font-bold uppercase text-[9px] py-2">Cancelar</button>
               </div>
             </form>

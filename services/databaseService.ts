@@ -18,7 +18,7 @@ import {
   serverTimestamp,
   deleteField
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance, PSFRankingData, PSF_LIST } from "../types";
+import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance, PSFRankingData, PSF_LIST, SystemConfig } from "../types";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDIS91OFlTIzbq44YCAAn95BAzGW5A-KBw",
@@ -43,6 +43,23 @@ const cleanData = (obj: any) => {
 };
 
 export const databaseService = {
+  // --- CONFIGURAÇÃO DO SISTEMA ---
+  subscribeSystemConfig: (callback: (config: SystemConfig) => void) => {
+    return onSnapshot(doc(db, "system", "config"), (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as SystemConfig);
+      } else {
+        const initial = { q1Label: 'Q1/25', q2Label: 'Q2/25', q3Label: 'Q3/25' };
+        setDoc(doc(db, "system", "config"), initial);
+        callback(initial);
+      }
+    });
+  },
+
+  updateSystemConfig: async (config: SystemConfig) => {
+    await setDoc(doc(db, "system", "config"), config, { merge: true });
+  },
+
   // --- MONITORAMENTO ---
   updateHeartbeat: async (memberId: string, isOnline: boolean) => {
     if (!memberId || memberId === 'guest') return;
@@ -238,51 +255,45 @@ export const databaseService = {
     aps.forEach(item => batch.set(doc(db, "aps_indicators", item.code), item));
     dental.forEach(item => batch.set(doc(db, "dental_indicators", item.code), item));
     
-    // DADOS REAIS ATUALIZADOS PARA AS 5 EQUIPES OFICIAIS
-    const officialScores: Record<string, any> = {
+    // DADOS REAIS EXTRAÍDOS DA IMAGEM FORNECIDA
+    const officialTerritorialScores: Record<string, any> = {
       "USF ANTONIO ARNAULD DA SILVA": { 
-        eSus: 3307, siaps: 2905,
-        esfQ1: 5.75, esfQ1C: 'Bom', esfQ2: 6.0, esfQ2C: 'Bom',
-        dQ1: 4.75, dQ1C: 'Suficiente', dQ2: 3.75, dQ2C: 'Suficiente'
+        tQ1: 10, tQ1C: 'Ótimo', tQ2: 10, tQ2C: 'Ótimo', tQ3: 10, tQ3C: 'Ótimo'
       },
       "USF CAROLINA ROSA DE ASSIS": { 
-        eSus: 4446, siaps: 3609,
-        esfQ1: 5.25, esfQ1C: 'Bom', esfQ2: 6.0, esfQ2C: 'Bom',
-        dQ1: 2.5, dQ1C: 'Regular', dQ2: 3.0, dQ2C: 'Suficiente'
+        tQ1: 10, tQ1C: 'Ótimo', tQ2: 10, tQ2C: 'Ótimo', tQ3: 10, tQ3C: 'Ótimo'
       },
       "USF DE CANUDOS": { 
-        eSus: 3240, siaps: 1500,
-        esfQ1: 6.25, esfQ1C: 'Bom', esfQ2: 5.75, esfQ2C: 'Bom',
-        dQ1: 3.5, dQ1C: 'Suficiente', dQ2: 3.0, dQ2C: 'Suficiente'
+        tQ1: 3.06, tQ1C: 'Regular', tQ2: 5.19, tQ2C: 'Suficiente', tQ3: 0, tQ3C: 'Regular'
       },
       "USF DE VARZEA DO CERCO": { 
-        eSus: 2704, siaps: 1865,
-        esfQ1: 6.75, esfQ1C: 'Bom', esfQ2: 7.25, esfQ2C: 'Bom',
-        dQ1: 4.25, dQ1C: 'Suficiente', dQ2: 3.25, dQ2C: 'Suficiente'
+        tQ1: 8.5, tQ1C: 'Bom', tQ2: 10, tQ2C: 'Ótimo', tQ3: 10, tQ3C: 'Ótimo'
       },
       "USF NOEME TELES BOAVENTURA": { 
-        eSus: 0, siaps: 0, // Dados populacionais não fornecidos para Noeme
-        esfQ1: 6.25, esfQ1C: 'Bom', esfQ2: 7.25, esfQ2C: 'Bom',
-        dQ1: 2.5, dQ1C: 'Regular', dQ2: 2.5, dQ2C: 'Regular'
+        tQ1: 10, tQ1C: 'Ótimo', tQ2: 10, tQ2C: 'Ótimo', tQ3: 10, tQ3C: 'Ótimo'
       }
     };
 
     PSF_LIST.forEach(psf => {
-      const data = officialScores[psf] || { esfQ1: 0, esfQ2: 0, dQ1: 0, dQ2: 0, eSus: 0, siaps: 0 };
+      const data = officialTerritorialScores[psf] || { tQ1: 0, tQ1C: 'Regular', tQ2: 0, tQ2C: 'Regular', tQ3: 0, tQ3C: 'Regular' };
       batch.set(doc(db, "psf_rankings", psf.replace(/\s+/g, '_')), {
         psfName: psf,
-        eSusCount: data.eSus || 0,
-        siapsCount: data.siaps || 0,
-        esfQ1Score: data.esfQ1 || 0,
-        esfQ1Class: data.esfQ1C || 'Regular',
-        esfQ2Score: data.esfQ2 || 0,
-        esfQ2Class: data.esfQ2C || 'Regular',
-        dentalQ1Score: data.dQ1 || 0,
-        dentalQ1Class: data.dQ1C || 'Regular',
-        dentalQ2Score: data.dQ2 || 0,
-        dentalQ2Class: data.dQ2C || 'Regular',
+        eSusCount: 0,
+        siapsCount: 0,
+        esfQ1Score: 0, esfQ1Class: 'Regular',
+        esfQ2Score: 0, esfQ2Class: 'Regular',
+        esfQ3Score: 0, esfQ3Class: 'Regular',
+        dentalQ1Score: 0, dentalQ1Class: 'Regular',
+        dentalQ2Score: 0, dentalQ2Class: 'Regular',
+        dentalQ3Score: 0, dentalQ3Class: 'Regular',
+        territorialQ1Score: data.tQ1,
+        territorialQ1Class: data.tQ1C,
+        territorialQ2Score: data.tQ2,
+        territorialQ2Class: data.tQ2C,
+        territorialQ3Score: data.tQ3,
+        territorialQ3Class: data.tQ3C,
         lastUpdate: new Date().toISOString()
-      });
+      }, { merge: true });
     });
     await batch.commit();
   }
