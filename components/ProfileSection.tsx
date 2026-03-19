@@ -30,12 +30,20 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({ member, isGuest, onOpen
         <p className="text-slate-500 max-w-md mx-auto mb-10 text-lg leading-relaxed">
           Para visualizar sua carteirinha digital e dados profissionais, você precisa estar cadastrado.
         </p>
-        <button 
-          onClick={onOpenLogin}
-          className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black shadow-xl"
-        >
-          ENTRAR NO PORTAL
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button 
+            onClick={onOpenLogin}
+            className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition-all"
+          >
+            ENTRAR NO PORTAL
+          </button>
+          <button 
+            onClick={() => (window as any).openRegister?.()}
+            className="bg-white text-emerald-600 border-2 border-emerald-600 px-10 py-4 rounded-2xl font-black shadow-lg hover:bg-emerald-50 transition-all"
+          >
+            SOLICITAR INSCRIÇÃO
+          </button>
+        </div>
       </div>
     );
   }

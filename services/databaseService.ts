@@ -1,5 +1,5 @@
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeApp } from "firebase/app";
 import { 
   getFirestore, 
   collection, 
@@ -16,8 +16,10 @@ import {
   updateDoc,
   getDoc,
   serverTimestamp,
-  deleteField
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  deleteField,
+  QuerySnapshot,
+  DocumentSnapshot
+} from "firebase/firestore";
 import { Member, APSIndicator, DentalIndicator, TreasuryData, MonthlyBalance, PSFRankingData, PSF_LIST, SystemConfig } from "../types";
 
 const firebaseConfig = {
@@ -45,7 +47,7 @@ const cleanData = (obj: any) => {
 export const databaseService = {
   // --- CONFIGURAÇÃO DO SISTEMA ---
   subscribeSystemConfig: (callback: (config: SystemConfig) => void) => {
-    return onSnapshot(doc(db, "system", "config"), (snapshot) => {
+    return onSnapshot(doc(db, "system", "config"), (snapshot: DocumentSnapshot) => {
       if (snapshot.exists()) {
         callback(snapshot.data() as SystemConfig);
       } else {
@@ -113,7 +115,7 @@ export const databaseService = {
   },
 
   subscribeSystemStats: (callback: (stats: { accessCount: number }) => void) => {
-    return onSnapshot(doc(db, "system", "stats"), (snapshot) => {
+    return onSnapshot(doc(db, "system", "stats"), (snapshot: DocumentSnapshot) => {
       if (snapshot.exists()) {
         callback(snapshot.data() as { accessCount: number });
       } else {
@@ -124,7 +126,7 @@ export const databaseService = {
 
   // --- DOCUMENTOS ---
   subscribeDocuments: (callback: (docs: Record<string, string>) => void) => {
-    return onSnapshot(collection(db, "system_documents"), (snapshot) => {
+    return onSnapshot(collection(db, "system_documents"), (snapshot: QuerySnapshot) => {
       const docs: Record<string, string> = {};
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
@@ -148,12 +150,12 @@ export const databaseService = {
   },
 
   // --- MEMBROS ---
-  subscribeMembers: (callback: (members: Member[]) => void, onError: (err: any) => void) => {
+  subscribeMembers: (callback: (members: Member[]) => void, onError: (err: Error) => void) => {
     const q = query(collection(db, "members"), orderBy("registrationDate", "desc"));
-    return onSnapshot(q, (snapshot) => {
+    return onSnapshot(q, (snapshot: QuerySnapshot) => {
       const members = snapshot.docs.map(d => ({ ...d.data() as Member, id: d.id }));
       callback(members);
-    }, (error) => onError(error));
+    }, (error: Error) => onError(error));
   },
 
   saveMember: async (member: Member) => {
@@ -167,11 +169,11 @@ export const databaseService = {
   },
 
   // --- INDICADORES ---
-  subscribeAPS: (callback: (indicators: APSIndicator[]) => void, onError: (err: any) => void) => {
+  subscribeAPS: (callback: (indicators: APSIndicator[]) => void, onError: (err: Error) => void) => {
     const q = query(collection(db, "aps_indicators"), orderBy("code", "asc"));
-    return onSnapshot(q, (snapshot) => {
+    return onSnapshot(q, (snapshot: QuerySnapshot) => {
       callback(snapshot.docs.map(d => d.data() as APSIndicator));
-    }, (error) => onError(error));
+    }, (error: Error) => onError(error));
   },
 
   updateAPS: async (indicator: APSIndicator) => {
@@ -179,7 +181,7 @@ export const databaseService = {
   },
 
   subscribePSFRankings: (callback: (rankings: PSFRankingData[]) => void) => {
-    return onSnapshot(collection(db, "psf_rankings"), (snapshot) => {
+    return onSnapshot(collection(db, "psf_rankings"), (snapshot: QuerySnapshot) => {
       callback(snapshot.docs.map(d => d.data() as PSFRankingData));
     });
   },
@@ -190,11 +192,11 @@ export const databaseService = {
     }, { merge: true });
   },
 
-  subscribeDental: (callback: (indicators: DentalIndicator[]) => void, onError: (err: any) => void) => {
+  subscribeDental: (callback: (indicators: DentalIndicator[]) => void, onError: (err: Error) => void) => {
     const q = query(collection(db, "dental_indicators"), orderBy("code", "asc"));
-    return onSnapshot(q, (snapshot) => {
+    return onSnapshot(q, (snapshot: QuerySnapshot) => {
       callback(snapshot.docs.map(d => d.data() as DentalIndicator));
-    }, (error) => onError(error));
+    }, (error: Error) => onError(error));
   },
 
   updateDental: async (indicator: DentalIndicator) => {
@@ -203,7 +205,7 @@ export const databaseService = {
 
   // --- TESOURARIA ---
   subscribeTreasury: (callback: (data: TreasuryData) => void) => {
-    return onSnapshot(doc(db, "treasury", "summary"), (snapshot) => {
+    return onSnapshot(doc(db, "treasury", "summary"), (snapshot: DocumentSnapshot) => {
       if (snapshot.exists()) {
         callback(snapshot.data() as TreasuryData);
       } else {
@@ -222,9 +224,9 @@ export const databaseService = {
 
   subscribeMonthlyHistory: (year: number, callback: (balances: MonthlyBalance[]) => void) => {
     const q = query(collection(db, "treasury_history"), where("year", "==", year));
-    return onSnapshot(q, (snapshot) => {
+    return onSnapshot(q, (snapshot: QuerySnapshot) => {
       const balances = snapshot.docs.map(d => d.data() as MonthlyBalance);
-      balances.sort((a, b) => b.month - a.month);
+      balances.sort((a: MonthlyBalance, b: MonthlyBalance) => b.month - a.month);
       callback(balances);
     });
   },

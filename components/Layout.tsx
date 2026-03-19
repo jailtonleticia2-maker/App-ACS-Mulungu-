@@ -40,6 +40,24 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
 
         {/* Menu Desktop */}
         <nav className="mt-6 px-4 space-y-1 hidden md:block">
+          {isGuest && (
+            <div className="space-y-2 mb-6">
+              <button
+                onClick={() => (window as any).openLogin?.()}
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-all font-black uppercase text-[10px] tracking-widest"
+              >
+                <span className="text-xl">🔑</span>
+                <span>Entrar no Portal</span>
+              </button>
+              <button
+                onClick={() => (window as any).openRegister?.()}
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-white text-emerald-600 border border-emerald-600 hover:bg-emerald-50 transition-all font-black uppercase text-[10px] tracking-widest"
+              >
+                <span className="text-xl">📝</span>
+                <span>Solicitar Inscrição</span>
+              </button>
+            </div>
+          )}
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -58,6 +76,24 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, user
 
         {/* Menu Inferior Estilo App (Mobile) */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-emerald-900 border-t border-emerald-800 flex justify-around items-center p-2 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.2)] overflow-x-auto no-scrollbar">
+          {isGuest && (
+            <>
+              <button
+                onClick={() => (window as any).openLogin?.()}
+                className="flex flex-col items-center p-2 min-w-[60px] rounded-xl transition-all text-emerald-400"
+              >
+                <span className="text-xl mb-0.5">🔑</span>
+                <span className="text-[8px] font-black uppercase tracking-widest">Entrar</span>
+              </button>
+              <button
+                onClick={() => (window as any).openRegister?.()}
+                className="flex flex-col items-center p-2 min-w-[60px] rounded-xl transition-all text-emerald-400"
+              >
+                <span className="text-xl mb-0.5">📝</span>
+                <span className="text-[8px] font-black uppercase tracking-widest">Inscrição</span>
+              </button>
+            </>
+          )}
           {menuItems.map((item) => (
             <button
               key={item.id}

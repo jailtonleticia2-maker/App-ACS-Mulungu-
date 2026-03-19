@@ -93,6 +93,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
     }
   };
 
+  const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.length > 8) val = val.slice(0, 8);
+    let formatted = val;
+    if (val.length > 2) formatted = val.slice(0, 2) + '/' + val.slice(2);
+    if (val.length > 4) formatted = val.slice(0, 2) + '/' + val.slice(2, 4) + '/' + val.slice(4);
+    setFormData({...formData, birthDate: formatted});
+  };
+
   const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -147,6 +156,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl">⏳</div>
              </div>
           </div>
+
+          {pendingMembers.length > 0 && (
+            <div className="bg-amber-50 rounded-[2.5rem] shadow-sm border border-amber-100 overflow-hidden">
+              <div className="p-8 border-b border-amber-100 flex justify-between items-center">
+                <h3 className="text-[11px] font-black text-amber-600 uppercase tracking-widest">Solicitações Pendentes</h3>
+                <span className="bg-amber-200 text-amber-800 px-3 py-1 rounded-full text-[10px] font-black">{pendingMembers.length}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <tbody className="divide-y divide-amber-100">
+                    {pendingMembers.map(m => (
+                      <tr key={m.id} className="hover:bg-amber-100/30">
+                        <td className="px-8 py-5">
+                          <p className="font-black text-sm uppercase text-amber-900">{m.fullName}</p>
+                          <p className="text-[10px] text-amber-600 font-bold uppercase">{m.cpf} • {m.workplace}</p>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex justify-end gap-3">
+                            <button 
+                              onClick={() => setConfirmAction({ type: 'delete', member: m })}
+                              className="px-4 py-2 bg-white text-rose-500 rounded-xl text-[10px] font-black uppercase border border-rose-100 shadow-sm hover:bg-rose-50"
+                            >
+                              Negar
+                            </button>
+                            <button 
+                              onClick={() => setConfirmAction({ type: 'approve', member: m })}
+                              className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase shadow-md hover:bg-emerald-700"
+                            >
+                              Aprovar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
             <div className="flex justify-between items-center p-8 border-b border-slate-50">
@@ -245,13 +293,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-[300] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] p-10 w-full max-w-2xl shadow-2xl animate-in zoom-in duration-300">
-            <h3 className="text-2xl font-black mb-8 uppercase">Cadastro de Agente</h3>
+        <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-[300] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-[3rem] p-10 w-full max-w-2xl shadow-2xl animate-in zoom-in duration-300 my-8">
+            <h3 className="text-2xl font-black mb-8 uppercase">{editingMember ? 'Editar Agente' : 'Novo Agente'}</h3>
             <form onSubmit={handleSaveMember} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <input placeholder="Nome Completo" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value.toUpperCase()})} className="p-4 bg-slate-50 border-2 rounded-2xl" />
-               <input placeholder="CPF" value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} className="p-4 bg-slate-50 border-2 rounded-2xl" />
-               <div className="md:col-span-2 flex gap-4">
+               <div className="md:col-span-2">
+                 <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Nome Completo</label>
+                 <input placeholder="Nome Completo" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl" required />
+               </div>
+               <div>
+                 <label className="text-[10px] font-black uppercase text-slate-400 ml-2">CPF</label>
+                 <input placeholder="CPF" value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl" required />
+               </div>
+               <div>
+                 <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Data de Nascimento</label>
+                 <input placeholder="DD/MM/AAAA" value={formData.birthDate} onChange={handleBirthDateChange} className="w-full p-4 bg-slate-50 border-2 rounded-2xl" required />
+               </div>
+               <div>
+                 <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Equipe</label>
+                 <input placeholder="Equipe" value={formData.team} onChange={e => setFormData({...formData, team: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl" />
+               </div>
+               <div>
+                 <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Micro-Área</label>
+                 <input placeholder="Micro-Área" value={formData.microArea} onChange={e => setFormData({...formData, microArea: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl" />
+               </div>
+               <div className="md:col-span-2">
+                 <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Unidade de Saúde</label>
+                 <select value={formData.workplace} onChange={e => setFormData({...formData, workplace: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl">
+                   {PSF_LIST.map(psf => <option key={psf} value={psf}>{psf}</option>)}
+                 </select>
+               </div>
+               <div className="md:col-span-2 flex gap-4 mt-4">
                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-black uppercase text-slate-400">Cancelar</button>
                  <button type="submit" className="flex-1 bg-emerald-900 text-white py-4 rounded-xl font-black uppercase shadow-lg">Salvar</button>
                </div>
