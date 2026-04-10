@@ -188,7 +188,7 @@ const App: React.FC = () => {
 
   const handleAdminVerify = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminPassword === 'admin2025') {
+    if (adminPassword === 'jailton30') {
       setAuthState({ user: { id: 'admin-01', name: 'Administrador', role: UserRole.ADMIN } });
       setShowAdminLogin(false);
       setAdminPassword('');
