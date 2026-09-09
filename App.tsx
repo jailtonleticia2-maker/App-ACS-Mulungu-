@@ -38,13 +38,8 @@ const DEFAULT_DENTAL: DentalIndicator[] = [
 const GUEST_USER = { id: 'guest', name: 'Visitante', role: UserRole.ACS };
 
 const App: React.FC = () => {
-  const [authState, setAuthState] = useState<AuthState>(() => {
-    try {
-      const saved = localStorage.getItem('acs_auth_v10');
-      return saved ? JSON.parse(saved) : { user: GUEST_USER };
-    } catch {
-      return { user: GUEST_USER };
-    }
+  const [authState, setAuthState] = useState<AuthState>({
+    user: GUEST_USER
   });
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -102,7 +97,9 @@ const App: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCpf = loginForm.cpf.replace(/\D/g, '');
-    const member = members.find(m => m.cpf.replace(/\D/g, '') === cleanCpf && (m.password === loginForm.password || loginForm.password === '1234'));
+    const member = members.find(
+      m => m.cpf.replace(/\D/g, '') === cleanCpf && m.password === loginForm.password
+    );
     
     if (member) {
       if (member.status === 'Pendente') {
@@ -112,7 +109,6 @@ const App: React.FC = () => {
       
       const newState = { user: { id: member.id, name: member.fullName, role: member.role } };
       setAuthState(newState);
-      localStorage.setItem('acs_auth_v10', JSON.stringify(newState));
       setShowUserLogin(false);
       setLoginForm({ cpf: '', password: '' });
       databaseService.updateHeartbeat(member.id, true);
@@ -218,10 +214,6 @@ const App: React.FC = () => {
 
     return () => { unsubMembers(); unsubAPS(); unsubDental(); };
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('acs_auth_v10', JSON.stringify(authState));
-  }, [authState]);
 
   const handleAdminVerify = (e: React.FormEvent) => {
     e.preventDefault();

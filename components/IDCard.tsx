@@ -568,12 +568,20 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
               <div className="text-center border-t border-emerald-200 pt-0.5 pb-0.5">
                 <div className="flex justify-around items-end mb-0.5">
                   <div className="flex flex-col items-center w-[27mm]">
-                    <ExecutiveSignature />
+                    <div className="w-[27mm] h-[8mm] flex items-center justify-center overflow-hidden" style={{ minHeight: '8mm', maxHeight: '8mm' }}>
+                      <div className="w-full h-full flex items-center justify-center" style={{ transform: 'scale(0.82)', transformOrigin: 'center center' }}>
+                        <ExecutiveSignature />
+                      </div>
+                    </div>
                     <div className="w-full border-b border-slate-400 mb-0.5"></div>
                     <p className="text-[4.5px] font-black text-slate-700 uppercase leading-none">Diretoria Executiva</p>
                   </div>
                   <div className="flex flex-col items-center w-[27mm]">
-                    <MemberSignature member={member} displayId={displayId} />
+                    <div className="w-[27mm] h-[8mm] flex items-center justify-center overflow-hidden" style={{ minHeight: '8mm', maxHeight: '8mm' }}>
+                      <div className="w-full h-full flex items-center justify-center" style={{ transform: 'scale(0.82)', transformOrigin: 'center center' }}>
+                        <MemberSignature member={member} displayId={displayId} />
+                      </div>
+                    </div>
                     <div className="w-full border-b border-slate-400 mb-0.5"></div>
                     <p className="text-[4.5px] font-black text-slate-700 uppercase leading-none">Assinatura do Titular</p>
                   </div>
