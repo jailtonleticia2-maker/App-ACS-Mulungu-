@@ -3,5 +3,8 @@
   "description": "Plataforma integrada para a Associação de Agentes Comunitários de Saúde de Mulungu do Morro, incluindo gestão de membros, emissão de carteirinhas, notícias do Ministério da Saúde e acesso a contracheque.",
   "requestFramePermissions": [
     "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }

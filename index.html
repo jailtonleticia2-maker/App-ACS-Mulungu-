@@ -21,6 +21,58 @@
         background-color: #f8fafc;
       }
       .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+      @media print {
+        .no-print, header, aside, nav, button {
+          display: none !important;
+        }
+        body, main {
+          background: white !important;
+          color: black !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          overflow: visible !important;
+        }
+        .fixed {
+          position: static !important;
+          background: white !important;
+          backdrop-filter: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        .print-card-area {
+          display: flex !important;
+          flex-direction: row !important;
+          justify-content: center !important;
+          align-items: center !important;
+          gap: 0 !important;
+          padding: 30mm 0 !important;
+          background: white !important;
+          width: 100% !important;
+        }
+        .card-face {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          page-break-inside: avoid !important;
+          box-shadow: none !important;
+          border: 1px solid #059669 !important;
+          box-sizing: border-box !important;
+        }
+        .card-front {
+          border-right: 1.5px solid #059669 !important;
+          border-top-right-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
+        .card-back {
+          border-left: none !important;
+          border-top-left-radius: 0 !important;
+          border-bottom-left-radius: 0 !important;
+        }
+        @page {
+          size: A4 portrait;
+          margin: 10mm;
+        }
+      }
     </style>
   <script type="importmap">
 {
@@ -34,11 +86,9 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-slate-50 text-slate-900 overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
-  <script type="module" src="/index.tsx"></script>
-</body>
+  </body>
 </html>

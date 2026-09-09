@@ -39,6 +39,7 @@ export interface Member {
   lastSeen?: string; 
   dailyAccessCount?: number; 
   lastDailyReset?: string; 
+  membershipNumber?: string;
 }
 
 export interface APSIndicator {

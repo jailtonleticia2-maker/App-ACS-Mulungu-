@@ -34,7 +34,9 @@ const VerificationSection: React.FC<VerificationSectionProps> = ({ member, onClo
                 )}
              </div>
              <h3 className="text-xl font-black text-slate-800 uppercase leading-tight text-center">{member.fullName}</h3>
-             <p className="text-emerald-600 font-black uppercase tracking-widest text-[9px] bg-emerald-50 px-3 py-1 rounded-full mt-2">Agente Comunitário de Saúde</p>
+             <p className="text-emerald-600 font-black uppercase tracking-widest text-[9px] bg-emerald-50 px-3 py-1 rounded-full mt-2">
+               Agente Comunitário de Saúde {member.membershipNumber ? `• ID: ACS-${member.membershipNumber.replace(/\D/g, '').padStart(3, '0')}` : ''}
+             </p>
           </div>
 
           <div className="space-y-4">

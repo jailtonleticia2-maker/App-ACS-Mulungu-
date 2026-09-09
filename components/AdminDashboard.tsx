@@ -108,6 +108,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
     try {
       const finalMember = editingMember ? formData : { ...formData, id: `acs-${Date.now()}`, registrationDate: new Date().toISOString() };
       await databaseService.saveMember(finalMember);
+      if (!finalMember.membershipNumber) {
+        await databaseService.getOrAssignMembershipNumber(finalMember.id);
+      }
       setIsModalOpen(false);
       setEditingMember(null);
       setFormData(initialForm);
@@ -221,7 +224,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                           </div>
                           <div>
                             <p className={`font-black text-sm uppercase ${isReallyOnline(m) ? 'text-emerald-700' : 'text-slate-800'}`}>{m.fullName}</p>
-                            {m.role === UserRole.ADMIN && <span className="text-[7px] font-black text-amber-600 uppercase">Administrador</span>}
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              {m.membershipNumber && (
+                                <span className="text-[8px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-200">
+                                  ID: ACS-{m.membershipNumber.replace(/\D/g, '').padStart(3, '0')}
+                                </span>
+                              )}
+                              {m.role === UserRole.ADMIN && <span className="text-[7px] font-black text-amber-600 uppercase">Administrador</span>}
+                            </div>
                           </div>
                         </div>
                       </td>

@@ -164,6 +164,52 @@ export const databaseService = {
     await setDoc(memberRef, cleanData(member), { merge: true });
   },
 
+  getOrAssignMembershipNumber: async (memberId: string): Promise<string> => {
+    if (!memberId) return "001";
+    try {
+      const memberRef = doc(db, "members", memberId);
+      const memberSnap = await getDoc(memberRef);
+      if (memberSnap.exists()) {
+        const data = memberSnap.data();
+        if (data.membershipNumber) {
+          const clean = String(data.membershipNumber).replace(/\D/g, '');
+          if (clean) return clean.padStart(3, '0');
+        }
+      }
+
+      // Buscar todos os membros para verificar números já atribuídos
+      const q = query(collection(db, "members"));
+      const snapshot = await getDocs(q);
+      const taken = new Set<string>();
+
+      snapshot.docs.forEach(docSnap => {
+        const d = docSnap.data();
+        // Não considerar o próprio membro se já tiver
+        if (docSnap.id !== memberId && d.membershipNumber) {
+          const clean = String(d.membershipNumber).replace(/\D/g, '');
+          if (clean) taken.add(clean.padStart(3, '0'));
+        }
+      });
+
+      // Atribuir o menor número disponível de 3 dígitos (001 a 999)
+      let assignedNumber = "001";
+      for (let i = 1; i <= 999; i++) {
+        const candidate = String(i).padStart(3, '0');
+        if (!taken.has(candidate)) {
+          assignedNumber = candidate;
+          break;
+        }
+      }
+
+      // Persistir de forma segura no Firestore
+      await setDoc(memberRef, { membershipNumber: assignedNumber }, { merge: true });
+      return assignedNumber;
+    } catch (err) {
+      console.error("Erro ao atribuir ID de 3 dígitos:", err);
+      return "001";
+    }
+  },
+
   deleteMember: async (id: string) => {
     await deleteDoc(doc(db, "members", id));
   },
@@ -205,6 +251,14 @@ export const databaseService = {
 
   // --- TESOURARIA ---
   subscribeTreasury: (callback: (data: TreasuryData) => void) => {
+    // Tentar carregar de cache local primeiro para resposta instantânea
+    try {
+      const cached = localStorage.getItem('acs_treasury_summary');
+      if (cached) {
+        callback(JSON.parse(cached));
+      }
+    } catch (e) {}
+
     return onSnapshot(doc(db, "treasury", "summary"), (snapshot: DocumentSnapshot) => {
       if (snapshot.exists()) {
         const raw = snapshot.data();
@@ -221,6 +275,9 @@ export const databaseService = {
           consolidatedInHand: typeof raw.consolidatedInHand === 'number' ? raw.consolidatedInHand : 0,
           consolidatedBankBalance: typeof raw.consolidatedBankBalance === 'number' ? raw.consolidatedBankBalance : 0,
         };
+        try {
+          localStorage.setItem('acs_treasury_summary', JSON.stringify(data));
+        } catch (e) {}
         callback(data);
       } else {
         const initial: TreasuryData = {
@@ -236,9 +293,18 @@ export const databaseService = {
           consolidatedInHand: 89.93,
           consolidatedBankBalance: 6065.44
         };
+        try {
+          localStorage.setItem('acs_treasury_summary', JSON.stringify(initial));
+        } catch (e) {}
         setDoc(doc(db, "treasury", "summary"), initial, { merge: true });
         callback(initial);
       }
+    }, (err) => {
+      console.warn("Aviso Firestore tesouraria:", err);
+      try {
+        const cached = localStorage.getItem('acs_treasury_summary');
+        if (cached) callback(JSON.parse(cached));
+      } catch (e) {}
     });
   },
 
@@ -256,6 +322,9 @@ export const databaseService = {
       consolidatedInHand: typeof data.consolidatedInHand === 'number' && !isNaN(data.consolidatedInHand) ? data.consolidatedInHand : 0,
       consolidatedBankBalance: typeof data.consolidatedBankBalance === 'number' && !isNaN(data.consolidatedBankBalance) ? data.consolidatedBankBalance : 0,
     };
+    try {
+      localStorage.setItem('acs_treasury_summary', JSON.stringify(cleanData));
+    } catch (e) {}
     await setDoc(doc(db, "treasury", "summary"), cleanData, { merge: true });
   },
 
