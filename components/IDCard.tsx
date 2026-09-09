@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 import { Member } from '../types';
 import Logo from './Logo';
 import { databaseService } from '../services/databaseService';
+import { ExecutiveSignature, MemberSignature } from './DigitalSignatures';
 
 interface IDCardProps {
   member: Member;
@@ -566,11 +567,13 @@ const IDCard: React.FC<IDCardProps> = ({ member, hidePrintButton = false }) => {
               {/* Seção Inferior: Linhas de Assinatura e Fé Pública - Bem elevadas */}
               <div className="text-center border-t border-emerald-200 pt-0.5 pb-0.5">
                 <div className="flex justify-around items-end mb-0.5">
-                  <div className="flex flex-col items-center w-24">
+                  <div className="flex flex-col items-center w-[27mm]">
+                    <ExecutiveSignature />
                     <div className="w-full border-b border-slate-400 mb-0.5"></div>
                     <p className="text-[4.5px] font-black text-slate-700 uppercase leading-none">Diretoria Executiva</p>
                   </div>
-                  <div className="flex flex-col items-center w-24">
+                  <div className="flex flex-col items-center w-[27mm]">
+                    <MemberSignature member={member} displayId={displayId} />
                     <div className="w-full border-b border-slate-400 mb-0.5"></div>
                     <p className="text-[4.5px] font-black text-slate-700 uppercase leading-none">Assinatura do Titular</p>
                   </div>

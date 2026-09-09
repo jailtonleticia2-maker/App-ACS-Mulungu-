@@ -40,6 +40,9 @@ export interface Member {
   dailyAccessCount?: number; 
   lastDailyReset?: string; 
   membershipNumber?: string;
+  signatureImage?: string;
+  signatureType?: 'auto' | 'drawn';
+  signatureHash?: string;
 }
 
 export interface APSIndicator {

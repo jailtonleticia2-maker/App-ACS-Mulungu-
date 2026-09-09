@@ -56,7 +56,14 @@ const VerificationSection: React.FC<VerificationSectionProps> = ({ member, onClo
              </div>
           </div>
 
-          <div className="pt-6 border-t border-slate-50 text-center">
+          <div className="pt-6 border-t border-slate-50 text-center space-y-3">
+             <div className="bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-200 flex items-center justify-between text-[10px]">
+               <div className="flex items-center gap-1.5 text-emerald-800 font-black">
+                 <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>
+                 <span>ASSINATURAS DIGITAIS AUTENTICADAS</span>
+               </div>
+               <span className="text-slate-500 font-bold uppercase text-[9px]">Diretoria • Titular</span>
+             </div>
              <p className="text-[10px] font-bold text-slate-400 leading-relaxed">
                Este profissional é um associado devidamente registrado na <br/>
                <span className="text-emerald-800 font-black uppercase">Associação de Agentes Comunitários de Saúde de Mulungu do Morro.</span>

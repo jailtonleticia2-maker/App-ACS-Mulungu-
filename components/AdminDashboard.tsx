@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Member, UserRole, PSF_LIST, SystemConfig } from '../types';
 import { databaseService } from '../services/databaseService';
+import SignaturePadModal from './SignaturePadModal';
 
 interface AdminDashboardProps {
   members: Member[];
@@ -28,6 +29,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
 
   const docInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -333,6 +335,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                    {PSF_LIST.map(psf => <option key={psf} value={psf}>{psf}</option>)}
                  </select>
                </div>
+
+               {/* Seção de Assinatura Digital do Sócio */}
+               <div className="md:col-span-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                   <div>
+                     <label className="text-[10px] font-black uppercase text-slate-700 block">Assinatura Digital do Sócio</label>
+                     <p className="text-[9px] text-slate-400 font-semibold">Atribuída automaticamente na carteirinha ou desenhada pelo titular</p>
+                   </div>
+                   <button
+                     type="button"
+                     onClick={() => setIsSignatureModalOpen(true)}
+                     className="px-3.5 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 self-start sm:self-auto"
+                   >
+                     {formData.signatureImage ? '✍️ Alterar Assinatura' : '✍️ Desenhar Assinatura'}
+                   </button>
+                 </div>
+
+                 {formData.signatureImage ? (
+                   <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-300 shadow-xs">
+                     <div className="flex items-center gap-3">
+                       <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+                         <img src={formData.signatureImage} alt="Assinatura" className="h-7 max-w-[120px] object-contain" />
+                       </div>
+                       <div>
+                         <span className="text-[10px] font-black text-emerald-800 uppercase block">Assinatura Desenhada</span>
+                         <span className="text-[8px] text-slate-400 font-bold">Válida para o verso da carteirinha</span>
+                       </div>
+                     </div>
+                     <button
+                       type="button"
+                       onClick={() => setFormData({ ...formData, signatureImage: undefined, signatureType: 'auto' })}
+                       className="text-[9px] font-black text-rose-500 hover:text-rose-700 uppercase px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 transition-colors"
+                     >
+                       Usar Automática
+                     </button>
+                   </div>
+                 ) : (
+                   <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
+                     <div className="flex items-center gap-2">
+                       <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                       <span className="text-[10px] font-black text-emerald-900 uppercase">Assinatura Digital Automática Ativa</span>
+                     </div>
+                     <span className="text-[9px] text-slate-400 font-semibold hidden sm:inline">(Caligrafia oficial eletrônica gerada pelo sistema)</span>
+                   </div>
+                 )}
+               </div>
+
                <div className="md:col-span-2 flex gap-4 mt-4">
                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-black uppercase text-slate-400">Cancelar</button>
                  <button type="submit" className="flex-1 bg-emerald-900 text-white py-4 rounded-xl font-black uppercase shadow-lg">Salvar</button>
@@ -341,6 +390,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
           </div>
         </div>
       )}
+
+      <SignaturePadModal
+        isOpen={isSignatureModalOpen}
+        onClose={() => setIsSignatureModalOpen(false)}
+        memberName={formData.fullName}
+        currentSignature={formData.signatureImage}
+        onSave={(sig) => setFormData(prev => ({ ...prev, signatureImage: sig || undefined, signatureType: sig ? 'drawn' : 'auto' }))}
+      />
 
       {confirmAction && (
         <div className="fixed inset-0 bg-slate-900/90 z-[500] flex items-center justify-center p-4">
