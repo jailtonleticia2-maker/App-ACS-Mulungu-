@@ -23,16 +23,17 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [showConsolidatedModal, setShowConsolidatedModal] = useState(false);
+  const [isSavingConsolidated, setIsSavingConsolidated] = useState(false);
   const [newFee, setNewFee] = useState<number>(0);
   
   const [consolidatedForm, setConsolidatedForm] = useState({
     startMonth: 1,
     endMonth: 10,
     year: 2025,
-    withdrawal: 0,
-    spent: 0,
-    inHand: 0,
-    bankBalance: 0
+    withdrawal: '0',
+    spent: '0',
+    inHand: '0',
+    bankBalance: '0'
   });
 
   const [editForm, setEditForm] = useState<Partial<MonthlyBalance>>({
@@ -45,6 +46,14 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
     description: ''
   });
 
+  const parseSafeNumber = (val: string | number | undefined): number => {
+    if (val === undefined || val === null) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    const sanitized = String(val).trim().replace(',', '.');
+    const parsed = parseFloat(sanitized);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   useEffect(() => {
     const unsubSummary = databaseService.subscribeTreasury((data) => {
       setSummary(data);
@@ -55,7 +64,6 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
         let sM = 1, eM = 10, yr = 2025;
         if (data.consolidatedPeriod) {
           const parts = data.consolidatedPeriod.split(' ');
-          // Formato esperado: [Janeiro] [a] [Outubro] [de] [2025]
           const startIdx = MONTHS.indexOf(parts[0]) + 1;
           const endIdx = MONTHS.indexOf(parts[2]) + 1;
           const yearVal = parseInt(parts[4]);
@@ -68,10 +76,10 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
           startMonth: sM,
           endMonth: eM,
           year: yr,
-          withdrawal: data.consolidatedWithdrawal || 12828.59,
-          spent: data.consolidatedSpent || 12738.66,
-          inHand: data.consolidatedInHand || 89.93,
-          bankBalance: data.consolidatedBankBalance || 6065.44
+          withdrawal: String(data.consolidatedWithdrawal ?? 0),
+          spent: String(data.consolidatedSpent ?? 0),
+          inHand: String(data.consolidatedInHand ?? 0),
+          bankBalance: String(data.consolidatedBankBalance ?? 0)
         });
       }
     });
@@ -134,24 +142,67 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
     }
   };
 
+  const handleOpenConsolidatedModal = () => {
+    if (summary) {
+      let sM = 1, eM = 10, yr = 2025;
+      if (summary.consolidatedPeriod) {
+        const parts = summary.consolidatedPeriod.split(' ');
+        const startIdx = MONTHS.indexOf(parts[0]) + 1;
+        const endIdx = MONTHS.indexOf(parts[2]) + 1;
+        const yearVal = parseInt(parts[4]);
+        if (startIdx > 0) sM = startIdx;
+        if (endIdx > 0) eM = endIdx;
+        if (!isNaN(yearVal)) yr = yearVal;
+      }
+
+      setConsolidatedForm({
+        startMonth: sM,
+        endMonth: eM,
+        year: yr,
+        withdrawal: String(summary.consolidatedWithdrawal ?? 0),
+        spent: String(summary.consolidatedSpent ?? 0),
+        inHand: String(summary.consolidatedInHand ?? 0),
+        bankBalance: String(summary.consolidatedBankBalance ?? 0)
+      });
+    }
+    setShowConsolidatedModal(true);
+  };
+
   const handleSaveConsolidated = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (summary) {
-      const formattedPeriod = `${MONTHS[consolidatedForm.startMonth - 1]} a ${MONTHS[consolidatedForm.endMonth - 1]} de ${consolidatedForm.year}`;
-      try {
-        await databaseService.updateTreasury({
-          ...summary,
-          consolidatedPeriod: formattedPeriod,
-          consolidatedWithdrawal: consolidatedForm.withdrawal,
-          consolidatedSpent: consolidatedForm.spent,
-          consolidatedInHand: consolidatedForm.inHand,
-          consolidatedBankBalance: consolidatedForm.bankBalance,
-          updatedBy: userName
-        });
-        setShowConsolidatedModal(false);
-      } catch (err) {
-        alert("Erro ao atualizar relatório consolidado.");
-      }
+    if (!summary) return;
+
+    setIsSavingConsolidated(true);
+    const formattedPeriod = `${MONTHS[consolidatedForm.startMonth - 1]} a ${MONTHS[consolidatedForm.endMonth - 1]} de ${consolidatedForm.year}`;
+    const cleanWithdrawal = parseSafeNumber(consolidatedForm.withdrawal);
+    const cleanSpent = parseSafeNumber(consolidatedForm.spent);
+    const cleanInHand = parseSafeNumber(consolidatedForm.inHand);
+    const cleanBankBalance = parseSafeNumber(consolidatedForm.bankBalance);
+
+    const updatedData: TreasuryData = {
+      ...summary,
+      consolidatedPeriod: formattedPeriod,
+      consolidatedWithdrawal: cleanWithdrawal,
+      consolidatedSpent: cleanSpent,
+      consolidatedInHand: cleanInHand,
+      consolidatedBankBalance: cleanBankBalance,
+      updatedBy: userName || 'Administrador'
+    };
+
+    try {
+      // Atualização imediata no estado local
+      setSummary(updatedData);
+
+      // Persistência no Firestore
+      await databaseService.updateTreasury(updatedData);
+
+      setShowConsolidatedModal(false);
+      alert("Relatório consolidado atualizado e salvo com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao atualizar relatório consolidado:", err);
+      alert("Erro ao atualizar relatório consolidado: " + (err.message || 'Verifique a conexão.'));
+    } finally {
+      setIsSavingConsolidated(false);
     }
   };
 
@@ -212,7 +263,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-emerald-100 relative overflow-hidden">
-                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4">SALDO ANTERIOR (+)</p>
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4">Entrada Bruta (+)</p>
                 <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
                   {formatCurrency(currentMonthData?.income || 0)}
                 </h3>
@@ -220,7 +271,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
               </div>
 
               <div className={`p-8 rounded-[2.5rem] shadow-sm border relative overflow-hidden transition-colors ${monthBalance >= 0 ? 'bg-emerald-900 text-white border-emerald-900' : 'bg-rose-900 text-white border-rose-900'}`}>
-                <p className="text-[10px] font-black uppercase tracking-widest mb-4 opacity-70">SALDO ATUAL (=)</p>
+                <p className="text-[10px] font-black uppercase tracking-widest mb-4 opacity-70">Saldo Final Líquido (=)</p>
                 <h3 className="text-4xl font-black tracking-tighter">
                   {formatCurrency(monthBalance)}
                 </h3>
@@ -326,7 +377,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
             </div>
             {isAdmin && (
               <button 
-                onClick={() => setShowConsolidatedModal(true)}
+                onClick={handleOpenConsolidatedModal}
                 className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
               >
                 ✏️ Editar Relatório
@@ -339,7 +390,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
               <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">Saque Total</p>
               <div className="flex items-center gap-3">
                 <span className="text-xl">💳</span>
-                <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(summary.consolidatedWithdrawal || 12828.59)}</p>
+                <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(summary.consolidatedWithdrawal ?? 0)}</p>
               </div>
             </div>
 
@@ -347,7 +398,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
               <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-2">Total Gasto</p>
               <div className="flex items-center gap-3">
                 <span className="text-xl">🧾</span>
-                <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(summary.consolidatedSpent || 12738.66)}</p>
+                <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(summary.consolidatedSpent ?? 0)}</p>
               </div>
             </div>
 
@@ -355,7 +406,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
               <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2">Resto em Mãos</p>
               <div className="flex items-center gap-3">
                 <span className="text-xl">🪙</span>
-                <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(summary.consolidatedInHand || 89.93)}</p>
+                <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(summary.consolidatedInHand ?? 0)}</p>
               </div>
             </div>
 
@@ -363,7 +414,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
               <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">Saldo no Banco</p>
               <div className="flex items-center gap-3">
                 <span className="text-xl">🏦</span>
-                <p className="text-2xl font-black text-emerald-400 tracking-tighter">{formatCurrency(summary.consolidatedBankBalance || 6065.44)}</p>
+                <p className="text-2xl font-black text-emerald-400 tracking-tighter">{formatCurrency(summary.consolidatedBankBalance ?? 0)}</p>
               </div>
             </div>
           </div>
@@ -408,7 +459,7 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
                       onChange={e => setConsolidatedForm({...consolidatedForm, year: parseInt(e.target.value)})}
                       className="w-full p-3 bg-white border-2 rounded-xl font-black text-xs uppercase"
                     >
-                      {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                      {[2023, 2024, 2025, 2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                  </div>
               </div>
@@ -417,23 +468,25 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Saque Total (R$)</label>
                   <input 
-                    type="number" 
-                    step="0.01" 
+                    type="text" 
+                    inputMode="decimal"
                     required 
                     value={consolidatedForm.withdrawal} 
-                    onChange={e => setConsolidatedForm({...consolidatedForm, withdrawal: parseFloat(e.target.value)})} 
+                    onChange={e => setConsolidatedForm({...consolidatedForm, withdrawal: e.target.value})} 
                     className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-emerald-700" 
+                    placeholder="0.00"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Total Gasto (R$)</label>
                   <input 
-                    type="number" 
-                    step="0.01" 
+                    type="text" 
+                    inputMode="decimal"
                     required 
                     value={consolidatedForm.spent} 
-                    onChange={e => setConsolidatedForm({...consolidatedForm, spent: parseFloat(e.target.value)})} 
+                    onChange={e => setConsolidatedForm({...consolidatedForm, spent: e.target.value})} 
                     className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-rose-700" 
+                    placeholder="0.00"
                   />
                 </div>
               </div>
@@ -441,28 +494,36 @@ const TreasurySection: React.FC<TreasurySectionProps> = ({ isAdmin, userName }) 
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Resto em Mãos (R$)</label>
                   <input 
-                    type="number" 
-                    step="0.01" 
+                    type="text" 
+                    inputMode="decimal"
                     required 
                     value={consolidatedForm.inHand} 
-                    onChange={e => setConsolidatedForm({...consolidatedForm, inHand: parseFloat(e.target.value)})} 
+                    onChange={e => setConsolidatedForm({...consolidatedForm, inHand: e.target.value})} 
                     className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-amber-700" 
+                    placeholder="0.00"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Saldo no Banco (R$)</label>
                   <input 
-                    type="number" 
-                    step="0.01" 
+                    type="text" 
+                    inputMode="decimal"
                     required 
                     value={consolidatedForm.bankBalance} 
-                    onChange={e => setConsolidatedForm({...consolidatedForm, bankBalance: parseFloat(e.target.value)})} 
+                    onChange={e => setConsolidatedForm({...consolidatedForm, bankBalance: e.target.value})} 
                     className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-emerald-700" 
+                    placeholder="0.00"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-3 pt-4">
-                <button type="submit" className="w-full bg-emerald-900 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl">Salvar Relatório</button>
+                <button 
+                  type="submit" 
+                  disabled={isSavingConsolidated}
+                  className="w-full bg-emerald-900 hover:bg-emerald-800 disabled:opacity-50 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  {isSavingConsolidated ? 'Salvando...' : 'Salvar Relatório'}
+                </button>
                 <button type="button" onClick={() => setShowConsolidatedModal(false)} className="w-full text-slate-400 font-bold uppercase text-[9px] tracking-widest py-2">Cancelar</button>
               </div>
             </form>

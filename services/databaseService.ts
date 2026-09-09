@@ -207,19 +207,56 @@ export const databaseService = {
   subscribeTreasury: (callback: (data: TreasuryData) => void) => {
     return onSnapshot(doc(db, "treasury", "summary"), (snapshot: DocumentSnapshot) => {
       if (snapshot.exists()) {
-        callback(snapshot.data() as TreasuryData);
+        const raw = snapshot.data();
+        const data: TreasuryData = {
+          id: 'summary',
+          totalIn: typeof raw.totalIn === 'number' ? raw.totalIn : 0,
+          totalOut: typeof raw.totalOut === 'number' ? raw.totalOut : 0,
+          monthlyFee: typeof raw.monthlyFee === 'number' ? raw.monthlyFee : 20,
+          lastUpdate: raw.lastUpdate || new Date().toISOString(),
+          updatedBy: raw.updatedBy || 'Sistema',
+          consolidatedPeriod: raw.consolidatedPeriod || 'Janeiro a Outubro de 2025',
+          consolidatedWithdrawal: typeof raw.consolidatedWithdrawal === 'number' ? raw.consolidatedWithdrawal : 0,
+          consolidatedSpent: typeof raw.consolidatedSpent === 'number' ? raw.consolidatedSpent : 0,
+          consolidatedInHand: typeof raw.consolidatedInHand === 'number' ? raw.consolidatedInHand : 0,
+          consolidatedBankBalance: typeof raw.consolidatedBankBalance === 'number' ? raw.consolidatedBankBalance : 0,
+        };
+        callback(data);
       } else {
         const initial: TreasuryData = {
-          id: 'summary', totalIn: 0, totalOut: 0, monthlyFee: 20, lastUpdate: new Date().toISOString(), updatedBy: 'Sistema'
+          id: 'summary',
+          totalIn: 0,
+          totalOut: 0,
+          monthlyFee: 20,
+          lastUpdate: new Date().toISOString(),
+          updatedBy: 'Sistema',
+          consolidatedPeriod: 'Janeiro a Outubro de 2025',
+          consolidatedWithdrawal: 12828.59,
+          consolidatedSpent: 12738.66,
+          consolidatedInHand: 89.93,
+          consolidatedBankBalance: 6065.44
         };
-        setDoc(doc(db, "treasury", "summary"), initial);
+        setDoc(doc(db, "treasury", "summary"), initial, { merge: true });
         callback(initial);
       }
     });
   },
 
   updateTreasury: async (data: TreasuryData) => {
-    await setDoc(doc(db, "treasury", "summary"), { ...data, lastUpdate: new Date().toISOString() });
+    const cleanData: Record<string, any> = {
+      id: 'summary',
+      totalIn: Number(data.totalIn) || 0,
+      totalOut: Number(data.totalOut) || 0,
+      monthlyFee: Number(data.monthlyFee) || 0,
+      lastUpdate: new Date().toISOString(),
+      updatedBy: data.updatedBy || 'Sistema',
+      consolidatedPeriod: data.consolidatedPeriod || 'Janeiro a Outubro de 2025',
+      consolidatedWithdrawal: typeof data.consolidatedWithdrawal === 'number' && !isNaN(data.consolidatedWithdrawal) ? data.consolidatedWithdrawal : 0,
+      consolidatedSpent: typeof data.consolidatedSpent === 'number' && !isNaN(data.consolidatedSpent) ? data.consolidatedSpent : 0,
+      consolidatedInHand: typeof data.consolidatedInHand === 'number' && !isNaN(data.consolidatedInHand) ? data.consolidatedInHand : 0,
+      consolidatedBankBalance: typeof data.consolidatedBankBalance === 'number' && !isNaN(data.consolidatedBankBalance) ? data.consolidatedBankBalance : 0,
+    };
+    await setDoc(doc(db, "treasury", "summary"), cleanData, { merge: true });
   },
 
   subscribeMonthlyHistory: (year: number, callback: (balances: MonthlyBalance[]) => void) => {
