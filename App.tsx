@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from './components/Layout';
 import AdminDashboard from './components/AdminDashboard';
 import ProfileSection from './components/ProfileSection';
@@ -13,6 +13,7 @@ import AssociationDocuments from './components/AssociationDocuments';
 import CoursesSection from './components/CoursesSection';
 import Logo from './components/Logo';
 import { databaseService } from './services/databaseService';
+import { processProfileImage } from './services/imageUtils';
 import { Member, UserRole, AuthState, APSIndicator, DentalIndicator, PSF_LIST } from './types';
 
 const DEFAULT_APS: APSIndicator[] = [
@@ -66,8 +67,37 @@ const App: React.FC = () => {
     team: '',
     microArea: '',
     areaType: 'Urbana',
-    gender: 'Masculino'
+    gender: 'Masculino',
+    profileImage: ''
   });
+
+  const registerPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+
+  const handleRegisterPhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsProcessingPhoto(true);
+    try {
+      const optimized = await processProfileImage(file);
+      setRegisterForm(prev => ({ ...prev, profileImage: optimized }));
+    } catch (err: any) {
+      alert(err.message || 'Erro ao carregar a foto do aparelho.');
+    } finally {
+      setIsProcessingPhoto(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.length > 11) val = val.slice(0, 11);
+    let formatted = val;
+    if (val.length > 3) formatted = val.slice(0, 3) + '.' + val.slice(3);
+    if (val.length > 6) formatted = val.slice(0, 3) + '.' + val.slice(3, 6) + '.' + val.slice(6);
+    if (val.length > 9) formatted = val.slice(0, 3) + '.' + val.slice(3, 6) + '.' + val.slice(6, 9) + '-' + val.slice(9);
+    setRegisterForm(prev => ({ ...prev, cpf: formatted }));
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +124,17 @@ const App: React.FC = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!registerForm.fullName || !registerForm.cpf || !registerForm.password) {
-      alert('Por favor, preencha os campos obrigatórios.');
+    const cleanCpf = (registerForm.cpf || '').replace(/\D/g, '');
+    if (!registerForm.fullName || !cleanCpf || !registerForm.password) {
+      alert('Por favor, preencha os campos obrigatórios (Nome, CPF e Senha).');
       return;
     }
 
-    const cleanCpf = registerForm.cpf.replace(/\D/g, '');
+    if (!registerForm.microArea) {
+      alert('Por favor, informe o número da sua Micro-Área.');
+      return;
+    }
+
     const exists = members.some(m => m.cpf.replace(/\D/g, '') === cleanCpf);
     if (exists) {
       alert('Este CPF já está cadastrado.');
@@ -108,14 +143,14 @@ const App: React.FC = () => {
 
     const newMember: Member = {
       id: `m-${Date.now()}`,
-      fullName: registerForm.fullName!.toUpperCase(),
+      fullName: registerForm.fullName!.toUpperCase().trim(),
       cpf: cleanCpf,
-      cns: registerForm.cns || '',
+      cns: registerForm.cns ? registerForm.cns.trim() : '',
       birthDate: registerForm.birthDate || '',
       password: registerForm.password!,
-      workplace: registerForm.workplace || '',
-      team: registerForm.team || '',
-      microArea: registerForm.microArea || '',
+      workplace: registerForm.workplace || 'USF CAROLINA ROSA DE ASSIS',
+      team: registerForm.team ? registerForm.team.trim() : '',
+      microArea: registerForm.microArea ? registerForm.microArea.trim() : '',
       areaType: (registerForm.areaType as any) || 'Urbana',
       gender: (registerForm.gender as any) || 'Masculino',
       registrationDate: new Date().toISOString(),
@@ -123,7 +158,8 @@ const App: React.FC = () => {
       role: UserRole.ACS,
       accessCount: 0,
       dailyAccessCount: 0,
-      isOnline: false
+      isOnline: false,
+      profileImage: registerForm.profileImage || ''
     };
 
     try {
@@ -140,7 +176,8 @@ const App: React.FC = () => {
         team: '',
         microArea: '',
         areaType: 'Urbana',
-        gender: 'Masculino'
+        gender: 'Masculino',
+        profileImage: ''
       });
     } catch (error) {
       console.error('Erro ao registrar:', error);
@@ -188,7 +225,7 @@ const App: React.FC = () => {
 
   const handleAdminVerify = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminPassword === 'jailton30') {
+    if (adminPassword === 'admin2025') {
       setAuthState({ user: { id: 'admin-01', name: 'Administrador', role: UserRole.ADMIN } });
       setShowAdminLogin(false);
       setAdminPassword('');
@@ -299,6 +336,31 @@ const App: React.FC = () => {
                 <h3 className="text-xl font-bold">Carteirinha</h3>
                 <p className="text-slate-500 text-sm mt-2">Identidade Digital.</p>
               </button>
+              <button onClick={() => setActiveTab('payslip')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all transform hover:-translate-y-1">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6">💰</div>
+                <h3 className="text-xl font-bold">Contracheque</h3>
+                <p className="text-slate-500 text-sm mt-2">Consulta Mensal.</p>
+              </button>
+              <button onClick={() => setActiveTab('news')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all transform hover:-translate-y-1">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6">📰</div>
+                <h3 className="text-xl font-bold">Notícias MS</h3>
+                <p className="text-slate-500 text-sm mt-2">Últimas Atualizações.</p>
+              </button>
+              <button onClick={() => setActiveTab('treasury')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all transform hover:-translate-y-1">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6">⚖️</div>
+                <h3 className="text-xl font-bold">Tesouraria</h3>
+                <p className="text-slate-500 text-sm mt-2">Transparência Financeira.</p>
+              </button>
+              <button onClick={() => setActiveTab('association-docs')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all transform hover:-translate-y-1">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6">📂</div>
+                <h3 className="text-xl font-bold">Documentos</h3>
+                <p className="text-slate-500 text-sm mt-2">Arquivos da Associação.</p>
+              </button>
+              <button onClick={() => setActiveTab('members')} className="p-8 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 text-left hover:shadow-2xl transition-all transform hover:-translate-y-1">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-6">⚙️</div>
+                <h3 className="text-xl font-bold">Gestão</h3>
+                <p className="text-slate-500 text-sm mt-2">Administração do Portal.</p>
+              </button>
             </div>
         </div>
       )}
@@ -328,48 +390,209 @@ const App: React.FC = () => {
       )}
 
       {showRegisterForm && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[110] p-4 overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl w-full max-w-lg my-8">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-black uppercase">Solicitar Inscrição</h3>
-              <button onClick={() => setShowRegisterForm(false)} className="text-slate-300 text-2xl">✕</button>
+        <div className="fixed inset-0 bg-slate-900/85 backdrop-blur-md flex items-center justify-center z-[110] p-4 overflow-y-auto">
+          <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-2xl w-full max-w-xl my-6 animate-in zoom-in duration-300">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-2xl font-black uppercase text-emerald-950 tracking-tight">Solicitar Inscrição</h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">Cadastre seus dados e foto para emissão da carteirinha oficial</p>
+              </div>
+              <button 
+                onClick={() => setShowRegisterForm(false)} 
+                className="w-10 h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center text-lg font-bold transition-colors"
+              >
+                ✕
+              </button>
             </div>
+
             <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Foto do Perfil Direto do Aparelho */}
+              <div className="md:col-span-2 bg-emerald-50/70 p-4 rounded-3xl border-2 border-dashed border-emerald-300 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                <div className="relative group shrink-0">
+                  <div className="w-20 h-20 rounded-2xl bg-white border-2 border-emerald-500 overflow-hidden shadow-md flex items-center justify-center">
+                    {registerForm.profileImage ? (
+                      <img 
+                        src={registerForm.profileImage} 
+                        alt="Foto do Perfil" 
+                        className="w-full h-full object-cover object-top" 
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-emerald-400">
+                        <span className="text-2xl">👤</span>
+                        <span className="text-[7px] font-black uppercase mt-0.5">Sem Foto</span>
+                      </div>
+                    )}
+                  </div>
+                  {registerForm.profileImage && (
+                    <span className="absolute -bottom-1 -right-1 bg-emerald-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-xs">
+                      ✓
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 justify-center sm:justify-start">
+                    <label className="text-[11px] font-black uppercase text-emerald-950 block">Foto da Carteirinha (3x4)</label>
+                    <span className="bg-emerald-200 text-emerald-900 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">Direto do Aparelho</span>
+                  </div>
+                  <p className="text-[9px] text-slate-500 font-semibold mt-0.5 mb-2.5">
+                    Selecione da galeria ou tire uma foto com a câmera do seu celular
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                    <input
+                      ref={registerPhotoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleRegisterPhotoSelect}
+                    />
+                    <button
+                      type="button"
+                      disabled={isProcessingPhoto}
+                      onClick={() => registerPhotoInputRef.current?.click()}
+                      className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white rounded-xl text-[10px] font-black uppercase shadow-xs transition-all flex items-center gap-1.5"
+                    >
+                      {isProcessingPhoto ? '⏳ Processando Imagem...' : (registerForm.profileImage ? '🔄 Trocar Foto do Aparelho' : '📷 Carregar Foto do Aparelho')}
+                    </button>
+                    {registerForm.profileImage && (
+                      <button
+                        type="button"
+                        onClick={() => setRegisterForm({ ...registerForm, profileImage: '' })}
+                        className="px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase border border-rose-200 transition-colors"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Nome Completo */}
               <div className="md:col-span-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Nome Completo</label>
-                <input placeholder="Nome Completo" className="w-full p-4 bg-slate-50 border rounded-2xl" value={registerForm.fullName} onChange={e => setRegisterForm({...registerForm, fullName: e.target.value.toUpperCase()})} required />
+                <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Nome Completo *</label>
+                <input 
+                  placeholder="Nome Completo do ACS" 
+                  className="w-full p-3.5 bg-slate-50 border rounded-2xl font-bold uppercase text-slate-800 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
+                  value={registerForm.fullName} 
+                  onChange={e => setRegisterForm({...registerForm, fullName: e.target.value.toUpperCase()})} 
+                  required 
+                />
               </div>
+
+              {/* CPF */}
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">CPF</label>
-                <input placeholder="CPF" className="w-full p-4 bg-slate-50 border rounded-2xl" value={registerForm.cpf} onChange={e => setRegisterForm({...registerForm, cpf: e.target.value})} required />
+                <label className="text-[10px] font-black uppercase text-slate-500 ml-2">CPF (Apenas Números) *</label>
+                <input 
+                  placeholder="000.000.000-00" 
+                  className="w-full p-3.5 bg-slate-50 border rounded-2xl font-bold text-slate-800 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
+                  value={registerForm.cpf} 
+                  onChange={handleCpfChange} 
+                  required 
+                />
               </div>
+
+              {/* CNS */}
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">CNS</label>
-                <input placeholder="CNS" className="w-full p-4 bg-slate-50 border rounded-2xl" value={registerForm.cns} onChange={e => setRegisterForm({...registerForm, cns: e.target.value})} />
+                <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Cartão SUS (CNS)</label>
+                <input 
+                  placeholder="Número do CNS" 
+                  className="w-full p-3.5 bg-slate-50 border rounded-2xl font-bold text-slate-800 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
+                  value={registerForm.cns} 
+                  onChange={e => setRegisterForm({...registerForm, cns: e.target.value})} 
+                />
               </div>
+
+              {/* Data de Nascimento */}
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Data de Nascimento</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Data de Nascimento *</label>
                 <input 
                   placeholder="DD/MM/AAAA" 
-                  className="w-full p-4 bg-slate-50 border rounded-2xl" 
+                  className="w-full p-3.5 bg-slate-50 border rounded-2xl font-bold text-slate-800 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
                   value={registerForm.birthDate} 
                   onChange={handleBirthDateChange} 
                   required 
                 />
               </div>
+
+              {/* Número da Micro-Área */}
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Senha</label>
-                <input type="password" placeholder="Senha" className="w-full p-4 bg-slate-50 border rounded-2xl" value={registerForm.password} onChange={e => setRegisterForm({...registerForm, password: e.target.value})} required />
+                <label className="text-[10px] font-black uppercase text-emerald-800 ml-2 flex items-center gap-1">
+                  <span>Número da Micro-Área *</span>
+                  <span className="text-[8px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-black">ACS</span>
+                </label>
+                <input 
+                  placeholder="Ex: 01, 02, 05..." 
+                  className="w-full p-3.5 bg-slate-50 border-2 border-emerald-300 rounded-2xl font-black text-emerald-950 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
+                  value={registerForm.microArea || ''} 
+                  onChange={e => setRegisterForm({...registerForm, microArea: e.target.value.toUpperCase()})} 
+                  required 
+                />
               </div>
+
+              {/* Equipe */}
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Equipe de Saúde</label>
+                <input 
+                  placeholder="Ex: Equipe 01, ESF I..." 
+                  className="w-full p-3.5 bg-slate-50 border rounded-2xl font-bold text-slate-800 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
+                  value={registerForm.team || ''} 
+                  onChange={e => setRegisterForm({...registerForm, team: e.target.value.toUpperCase()})} 
+                />
+              </div>
+
+              {/* Zona de Atuação */}
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Zona de Atuação</label>
+                <select 
+                  className="w-full p-3.5 bg-slate-50 border rounded-2xl font-bold text-slate-800 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
+                  value={registerForm.areaType || 'Urbana'} 
+                  onChange={e => setRegisterForm({...registerForm, areaType: e.target.value as any})}
+                >
+                  <option value="Urbana">Zona Urbana</option>
+                  <option value="Rural">Zona Rural</option>
+                </select>
+              </div>
+
+              {/* Unidade de Saúde */}
               <div className="md:col-span-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Unidade de Saúde</label>
-                <select className="w-full p-4 bg-slate-50 border rounded-2xl" value={registerForm.workplace} onChange={e => setRegisterForm({...registerForm, workplace: e.target.value})}>
+                <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Unidade Básica de Saúde / PSF *</label>
+                <select 
+                  className="w-full p-3.5 bg-slate-50 border rounded-2xl font-bold text-slate-800 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
+                  value={registerForm.workplace} 
+                  onChange={e => setRegisterForm({...registerForm, workplace: e.target.value})}
+                >
                   {PSF_LIST.map(psf => <option key={psf} value={psf}>{psf}</option>)}
                 </select>
               </div>
-              <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                <button type="button" onClick={() => setShowRegisterForm(false)} className="w-full py-4 text-slate-400 font-black uppercase">Cancelar</button>
-                <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg">Enviar Solicitação</button>
+
+              {/* Senha */}
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-black uppercase text-slate-500 ml-2">Senha de Acesso ao Portal *</label>
+                <input 
+                  type="password" 
+                  placeholder="Crie sua senha de acesso" 
+                  className="w-full p-3.5 bg-slate-50 border rounded-2xl font-bold text-slate-800 text-sm focus:bg-white focus:border-emerald-600 outline-hidden transition-all" 
+                  value={registerForm.password} 
+                  onChange={e => setRegisterForm({...registerForm, password: e.target.value})} 
+                  required 
+                />
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="md:col-span-2 grid grid-cols-2 gap-4 mt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowRegisterForm(false)} 
+                  className="w-full py-3.5 text-slate-400 hover:text-slate-600 font-black uppercase text-xs tracking-wider rounded-2xl hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white py-3.5 rounded-2xl font-black uppercase text-xs tracking-wider shadow-lg transition-all"
+                >
+                  Enviar Solicitação
+                </button>
               </div>
             </form>
           </div>
