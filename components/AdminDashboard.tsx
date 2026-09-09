@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Member, UserRole, PSF_LIST, SystemConfig } from '../types';
 import { databaseService } from '../services/databaseService';
+import { processProfileImage } from '../services/imageUtils';
 import SignaturePadModal from './SignaturePadModal';
 
 interface AdminDashboardProps {
@@ -33,7 +34,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
 
   const docInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const memberPhotoInputRef = useRef<HTMLInputElement>(null);
   const [targetDocId, setTargetDocId] = useState<string | null>(null);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+
+  const handleMemberPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsProcessingPhoto(true);
+    try {
+      const optimized = await processProfileImage(file);
+      setFormData(prev => ({ ...prev, profileImage: optimized }));
+    } catch (err: any) {
+      alert(err.message || 'Erro ao carregar a foto do aparelho.');
+    } finally {
+      setIsProcessingPhoto(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
@@ -174,8 +192,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                     {pendingMembers.map(m => (
                       <tr key={m.id} className="hover:bg-amber-100/30">
                         <td className="px-8 py-5">
-                          <p className="font-black text-sm uppercase text-amber-900">{m.fullName}</p>
-                          <p className="text-[10px] text-amber-600 font-bold uppercase">{m.cpf} • {m.workplace}</p>
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-white overflow-hidden border-2 border-amber-200 shadow-xs shrink-0 flex items-center justify-center">
+                              {m.profileImage ? (
+                                <img src={m.profileImage} className="w-full h-full object-cover object-top" alt={m.fullName} />
+                              ) : (
+                                <span className="text-xs text-amber-700 font-black">ACS</span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-black text-sm uppercase text-amber-900">{m.fullName}</p>
+                              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-amber-700 font-bold uppercase">{m.cpf} • {m.workplace}</span>
+                                {m.microArea && (
+                                  <span className="text-[8px] font-black bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300 uppercase">
+                                    MA: {m.microArea}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-8 py-5 text-right">
                           <div className="flex justify-end gap-3">
@@ -230,6 +266,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
                               {m.membershipNumber && (
                                 <span className="text-[8px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-200">
                                   ID: ACS-{m.membershipNumber.replace(/\D/g, '').padStart(3, '0')}
+                                </span>
+                              )}
+                              {m.microArea && (
+                                <span className="text-[8px] font-black bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded border border-slate-200 uppercase">
+                                  MA: {m.microArea}
                                 </span>
                               )}
                               {m.role === UserRole.ADMIN && <span className="text-[7px] font-black text-amber-600 uppercase">Administrador</span>}
@@ -309,6 +350,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ members, currentUserId,
           <div className="bg-white rounded-[3rem] p-10 w-full max-w-2xl shadow-2xl animate-in zoom-in duration-300 my-8">
             <h3 className="text-2xl font-black mb-8 uppercase">{editingMember ? 'Editar Agente' : 'Novo Agente'}</h3>
             <form onSubmit={handleSaveMember} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Foto do Agente Direto do Aparelho */}
+                <div className="md:col-span-2 bg-emerald-50/70 p-4 rounded-2xl border-2 border-dashed border-emerald-300 flex flex-col sm:flex-row items-center gap-4">
+                  <div className="w-16 h-16 rounded-xl bg-white border-2 border-emerald-500 overflow-hidden shadow-sm flex items-center justify-center shrink-0">
+                    {formData.profileImage ? (
+                      <img src={formData.profileImage} alt="Foto 3x4" className="w-full h-full object-cover object-top" />
+                    ) : (
+                      <span className="text-xl text-emerald-400">👤</span>
+                    )}
+                  </div>
+                  <div className="flex-1 text-center sm:text-left">
+                    <label className="text-[10px] font-black uppercase text-emerald-950 block">Foto da Carteirinha (3x4)</label>
+                    <p className="text-[8px] text-slate-500 font-semibold mt-0.5 mb-2">Carregue ou substitua a foto direto do aparelho</p>
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                      <input
+                        ref={memberPhotoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleMemberPhotoUpload}
+                      />
+                      <button
+                        type="button"
+                        disabled={isProcessingPhoto}
+                        onClick={() => memberPhotoInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[9px] font-black uppercase shadow-xs transition-all flex items-center gap-1"
+                      >
+                        {isProcessingPhoto ? '⏳ Processando...' : (formData.profileImage ? '🔄 Trocar Foto do Aparelho' : '📷 Carregar Foto do Aparelho')}
+                      </button>
+                      {formData.profileImage && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, profileImage: '' })}
+                          className="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase border border-rose-200 transition-colors"
+                        >
+                          Remover
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
                <div className="md:col-span-2">
                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Nome Completo</label>
                  <input placeholder="Nome Completo" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl" required />
